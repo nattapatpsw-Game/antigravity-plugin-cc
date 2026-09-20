@@ -1,0 +1,3 @@
+# Normalise to LF in the repository. Without this, committing from Windows stores CRLF
+# and anyone cloning on macOS or Linux sees the whole tree as modified.
+* text=auto eol=lf

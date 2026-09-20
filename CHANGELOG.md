@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- `/antigravity:ag` — the short alias now ships with the plugin, so it works for anyone who installs it rather than only on the author's machine.
+- CI runs the smoke test on Linux, macOS and Windows for every push. That also gives the plugin its first cross-platform evidence: the suite never invokes `agy`, so it needs no install, no auth and no network anywhere. CI additionally checks that both manifests agree on the version.
+- `.gitattributes` normalises line endings to LF in the repository. Without it, committing from Windows stored CRLF and anyone cloning on macOS or Linux saw the whole tree as modified.
+- README split: the script API, outcome handling and design reasoning moved to [docs/internals.md](docs/internals.md), leaving the README for installing and using the plugin. 500 lines down to 375.
+
 ## 0.4.0
 
 - Task framing is now composed from named, reusable prompt blocks instead of four hard-coded strings. Existing wording is preserved byte for byte — each sentence was arrived at by watching a specific headless failure, so the blocks were rearranged, never reworded.

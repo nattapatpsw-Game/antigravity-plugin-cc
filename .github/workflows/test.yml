@@ -1,0 +1,44 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    # The suite never invokes `agy`, so it needs no CLI install, no auth and no network.
+    # Running it on all three platforms is also the only cross-platform evidence this
+    # plugin has — it exercises path resolution and the validation layer everywhere.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check the companion script parses
+        run: node --check plugins/antigravity/scripts/agy-companion.mjs
+
+      - name: Smoke test
+        run: node test/smoke.mjs
+
+      - name: Manifests are valid JSON and agree on the version
+        shell: bash
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            const market = JSON.parse(fs.readFileSync('.claude-plugin/marketplace.json', 'utf8'));
+            const plugin = JSON.parse(fs.readFileSync('plugins/antigravity/.claude-plugin/plugin.json', 'utf8'));
+            const versions = new Set([market.metadata.version, market.plugins[0].version, plugin.version]);
+            if (versions.size !== 1) {
+              console.error('version mismatch across manifests:', [...versions].join(', '));
+              process.exit(1);
+            }
+            console.log('version', [...versions][0]);
+          "
