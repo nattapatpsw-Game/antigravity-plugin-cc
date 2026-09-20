@@ -130,6 +130,17 @@ There are four. Each one applies its own `agy` flags and its own prompt framing.
 
 Uses Antigravity's `generate_image` tool and saves a real image file (JPG/PNG). The reply ends with the file's absolute path.
 
+**Ask for several variants in one request** — just say how many:
+
+```
+/antigravity:task image Three variants of a coffee cup on a wooden table, flat style
+→ coffee_cup_flat_isometric.jpg
+  coffee_cup_flat_sideview.jpg
+  coffee_cup_flat_topview.jpg
+```
+
+One run produces all of them, and they come out deliberately differentiated rather than three random takes on the same brief. Because it is a single conversation, a follow-up like "the second one, but darker" still works — see [Refining a result](#refining-a-result). Expect roughly 30 seconds per image.
+
 ### `ui` — build a chart, dashboard or diagram
 
 ```
