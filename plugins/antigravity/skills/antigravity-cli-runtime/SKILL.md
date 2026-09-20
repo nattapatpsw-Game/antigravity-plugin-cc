@@ -111,7 +111,9 @@ The raw escape hatch — no presets, no framing. Runs `agy -p "<task text>" --ou
 node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" types
 ```
 
-Lists the task types and whether each writes files. No agy invocation.
+Returns `taskTypes` (with whether each writes files) and `modelAliases`. No agy invocation, so it costs nothing.
+
+This is the source `/antigravity:help` renders from. Neither list may be written into the card by hand — doing so is how it went stale when aliases were added in 0.7.0, and a smoke check now fails the build if any alias or model slug appears in the card literally.
 
 ## Outcome handling
 

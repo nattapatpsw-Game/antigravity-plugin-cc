@@ -425,7 +425,9 @@ function main() {
       result = cmdTask(flags);
       break;
     case 'types':
-      result = { taskTypes: describeTaskTypes() };
+      // Also carries the aliases so /antigravity:help can render both from one call.
+      // A hardcoded list in the card went stale the moment an alias was added.
+      result = { taskTypes: describeTaskTypes(), modelAliases: MODEL_ALIASES };
       break;
     default:
       result = { error: `unknown command: ${command || '(none)'} (valid: setup, run, task, types)` };

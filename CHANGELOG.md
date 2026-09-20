@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0
+
+- `/antigravity:help` now reads the model aliases from the plugin instead of listing them itself, the way it already did for task types. The card had gone stale within one release: the four aliases added in 0.7.0 never reached it.
+- `types` returns `modelAliases` alongside `taskTypes`, so the card fills both from a single call.
+- A smoke check now fails the build if any alias or model slug appears literally in the help card. Verified by reintroducing the original mistake in a copy and watching it fail.
+
 ## 0.7.0
 
 Both adopted from [simplybychris/antigravity-plugin-cc](https://github.com/simplybychris/antigravity-plugin-cc) after comparing the two plugins.

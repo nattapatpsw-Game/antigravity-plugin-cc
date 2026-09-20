@@ -301,7 +301,7 @@ Leave `--model` unset and `agy` uses its configured default. To override:
 /antigravity:task --model claude-sonnet-4-6 code Refactor this parser
 ```
 
-Aliases save you remembering slugs:
+Run `/antigravity:help` to see the current list in-session — it reads the aliases from the plugin, so it can't fall behind. For reference:
 
 | Alias | Resolves to |
 |---|---|
@@ -419,7 +419,7 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 
 ## Versioning
 
-Marketplace and plugin are both at `0.7.0`. See [CHANGELOG.md](CHANGELOG.md), `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
+Marketplace and plugin are both at `0.8.0`. See [CHANGELOG.md](CHANGELOG.md), `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
 
 Each release is tagged, so you can pin to one instead of tracking the default branch:
 
@@ -427,7 +427,7 @@ Each release is tagged, so you can pin to one instead of tracking the default br
 {
   "source": "github",
   "repo": "nattapatpsw-Game/antigravity-plugin-cc",
-  "ref": "v0.7.0"
+  "ref": "v0.8.0"
 }
 ```
 

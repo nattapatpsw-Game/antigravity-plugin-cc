@@ -7,11 +7,14 @@
 // Exits non-zero on the first failing assertion group.
 
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const SCRIPT = resolve(dirname(fileURLToPath(import.meta.url)), '../plugins/antigravity/scripts/agy-companion.mjs');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const SCRIPT = resolve(ROOT, 'plugins/antigravity/scripts/agy-companion.mjs');
+const HELP_CARD = resolve(ROOT, 'plugins/antigravity/commands/help.md');
 const TYPES = ['ask', 'image', 'ui', 'code'];
 const MISSING_DIR = resolve(tmpdir(), `agy-smoke-missing-${Date.now()}`);
 
@@ -128,6 +131,21 @@ check('--agent is never forwarded', () => {
   // agy agents is empty on a stock install, so the flag is intentionally unsupported.
   const argv = argvOf('run', '--prompt', 'x', '--agent', 'whatever');
   return argv.includes('--agent') ? `--agent leaked into: ${argv.join(' ')}` : null;
+});
+
+check('types exposes the model aliases', () => {
+  const aliases = call('types').modelAliases;
+  if (!aliases || typeof aliases !== 'object') return 'modelAliases missing from the types output';
+  return Object.keys(aliases).length >= 4 ? null : 'suspiciously few aliases';
+});
+
+check('the help card never hardcodes aliases or slugs', () => {
+  // This is the regression that prompted the check: aliases were added to the script and
+  // the card kept listing the old four. Anything listed literally there will go stale.
+  const card = readFileSync(HELP_CARD, 'utf8');
+  const listed = Object.keys(call('types').modelAliases).filter((alias) => card.includes(`\`${alias}\``));
+  if (listed.length) return `help.md lists ${listed.join(', ')} literally — read them from the types output instead`;
+  return /gemini-|claude-|gpt-oss-/.test(card) ? 'help.md contains a model slug' : null;
 });
 
 check('model aliases resolve to full slugs', () => {
