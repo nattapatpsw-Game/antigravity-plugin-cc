@@ -1,0 +1,21 @@
+{
+  "name": "antigravity-plugin-cc",
+  "owner": {
+    "name": "nattapat.psw"
+  },
+  "metadata": {
+    "description": "Antigravity (agy) CLI plugin for Claude Code: delegate tasks to Antigravity headlessly.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "antigravity",
+      "description": "Use Antigravity (agy) from Claude Code to delegate tasks headlessly.",
+      "version": "0.1.0",
+      "author": {
+        "name": "nattapat.psw"
+      },
+      "source": "./plugins/antigravity"
+    }
+  ]
+}
