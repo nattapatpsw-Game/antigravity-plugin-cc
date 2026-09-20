@@ -19,6 +19,7 @@ Useful when you want a second opinion from a different model, want to offload wo
 - [Commands](#commands)
 - [Task types](#task-types)
 - [How the type is chosen](#how-the-type-is-chosen)
+- [Refining a result](#refining-a-result)
 - [Where output goes](#where-output-goes)
 - [Choosing a model](#choosing-a-model)
 - [What Antigravity can actually do](#what-antigravity-can-actually-do)
@@ -26,6 +27,7 @@ Useful when you want a second opinion from a different model, want to offload wo
 - [How it works](#how-it-works)
 - [`agy-companion.mjs` reference](#agy-companionmjs-reference)
 - [Success and failure](#success-and-failure)
+- [Tests](#tests)
 - [Design notes](#design-notes)
 - [Repo layout](#repo-layout)
 
@@ -199,6 +201,22 @@ Here `image` is the subject, not routing — the rest ("processing library ไ�
 
 ---
 
+## Refining a result
+
+You don't have to restate a task to change it. Every result carries the Antigravity conversation it came from, so a follow-up picks up where the last one left off:
+
+```
+/antigravity:task image A flat illustration of a green triangle on white
+→ ...\green_triangle.jpg
+
+/antigravity:task make it purple instead
+→ ...\purple_triangle.jpg
+```
+
+The second request never mentions a triangle. Antigravity still has the first turn's context, so it keeps the composition and changes only what you asked for. The same works for `ui` ("same chart but monthly"), `code` ("now add a test for it") and `ask` ("shorter").
+
+Under the hood this resumes a specific conversation by id — never "the most recent conversation", which would attach to whatever you last ran in the Antigravity IDE or to a task running in parallel.
+
 ## Where output goes
 
 Output lands in the **current working directory** unless you pass `--out`:
@@ -210,6 +228,8 @@ Output lands in the **current working directory** unless you pass `--out`:
 The directory must already exist — the plugin won't create it, and will tell you so rather than failing deep inside `agy`.
 
 Every reply that produces files ends with their absolute paths. This is deliberate: in headless mode there's no file tree to click through, so a path you can copy is the only way to find the output.
+
+Those paths are also **checked against the filesystem**, not just taken from what Antigravity says. The plugin lists the output directory before and after each run and reports what actually appeared or changed. If the reply claims a file that isn't there, you're told — which matters because image generation does occasionally fail a turn, and a confident-sounding reply is not evidence.
 
 ---
 
@@ -314,12 +334,15 @@ Auth is checked with `agy models`, not `agy -p`. `agy -p` triggers an interactiv
 node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task \
   --type <image|ui|code|ask> \
   --prompt "<task text>" \
-  [--out <dir>] [--model <slug>] [--effort low|medium|high] [--timeout <duration>]
+  [--out <dir>] [--conversation <id>] \
+  [--model <slug>] [--effort low|medium|high] [--timeout <duration>] [--dry-run]
 ```
 
 Applies the type's preset — `agy` flags plus prompt framing — and runs. `--type` defaults to `ask`.
 
-A run that reaches `agy` returns Antigravity's envelope plus two fields of its own: `taskType` and `outputDir`. A request rejected during validation — unknown type, missing prompt, bad `--mode`, missing `--out` — returns only `status` and `error`.
+A run that reaches `agy` returns Antigravity's envelope plus four fields of its own: `taskType`, `outputDir`, and `filesCreated` / `filesModified`. A request rejected during validation — unknown type, missing prompt, bad `--mode`, missing `--out` — returns only `status` and `error`.
+
+`filesCreated` and `filesModified` come from listing `--out` before and after the run and comparing names and mtimes. The scan is **shallow** — for a `code` task `--out` can be a whole repository, and walking it every time would cost more than it catches — so writes into subdirectories aren't reported.
 
 The `ui` preset bans remote resources item by item rather than just asking for a "self-contained" file. Antigravity's `generative_ui` skill points at a Tailwind CDN, and left to itself it reads "self-contained" as "one file" — then pulls in Chart.js and Google Fonts, producing an artifact that renders blank offline.
 
@@ -330,9 +353,9 @@ The raw escape hatch: no presets, no framing.
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" run \
   --prompt "<task text>" \
-  [--model <slug>] [--effort low|medium|high] [--agent <name>] \
+  [--conversation <id>] [--model <slug>] [--effort low|medium|high] [--agent <name>] \
   [--mode accept-edits|plan] [--add-dir <dir>] \
-  [--timeout <duration>] [--skip-permissions]
+  [--timeout <duration>] [--skip-permissions] [--dry-run]
 ```
 
 ```json
@@ -360,6 +383,8 @@ Flag behaviour:
 - **`--effort`** is dropped whenever `--model` is set. See [Choosing a model](#choosing-a-model).
 - **`--add-dir`** is repeatable, and is what lets `agy` write outside its default workspace.
 - **`--skip-permissions`** maps to `--dangerously-skip-permissions`. Grants unattended tool approval, so it's only set where a preset genuinely needs it.
+- **`--conversation`** resumes a specific conversation by id. The script never emits `agy`'s bare `-c`/`--continue`, which means "most recent conversation on this machine" and would attach to the Antigravity IDE or a parallel task.
+- **`--dry-run`** returns the argv that *would* be passed to `agy` instead of spawning it — the cheap way to see what a preset actually does.
 - **`--agent`** is accepted but currently useless: `agy agents` returns an empty list on a stock install.
 - Prompts are passed with `spawnSync` **without** `shell: true`, so quotes, `$` and backticks in a prompt reach `agy` intact and can't be reinterpreted by a shell.
 
@@ -388,6 +413,16 @@ A run blocked by a headless permission prompt looks identical from the outside, 
 
 ---
 
+## Tests
+
+```bash
+node test/smoke.mjs
+```
+
+Plain Node, no dependencies, and **no `agy` invocations** — it runs anywhere in under a second, with no CLI install, auth or network. It covers the validation layer (every error string), the flag-building logic (`--effort` dropped when `--model` is set, `--conversation` forwarded, `-c`/`--continue` never emitted) and the per-type presets (`image`/`ui` carry unattended approval, `ask`/`code` don't). Exits non-zero on failure.
+
+It can't cover what only a live run shows — whether a preset's *wording* actually gets Antigravity to do the right thing. For that, run the real commands.
+
 ## Design notes
 
 - **Thin forwarding, not a smart wrapper.** The subagent shapes one call and relays the result. Nothing in between reinterprets Antigravity's answer.
@@ -396,6 +431,7 @@ A run blocked by a headless permission prompt looks identical from the outside, 
 - **Least privilege per type.** Only the types that genuinely need unattended tool approval get it — verified by testing, not assumed.
 - **Auth checks never hang.** Sign-in status is probed with a command that fails fast instead of one that can open a browser.
 - **Fail loudly, not quietly.** Where `agy` fails open — an unknown `--mode`, a timeout dressed up as success — the plugin converts it into an explicit error.
+- **Check, don't trust.** Output paths are verified against the filesystem rather than read out of Antigravity's prose, so a claimed file and a real one are never confused.
 
 ---
 
@@ -407,6 +443,8 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 .
 ├── .claude-plugin/
 │   └── marketplace.json               # marketplace manifest
+├── test/
+│   └── smoke.mjs                      # offline test suite — never calls `agy`
 └── plugins/
     └── antigravity/
         ├── .claude-plugin/
@@ -426,7 +464,9 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 
 ## Versioning
 
-Marketplace and plugin are both at `0.1.1`. See `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
+Marketplace and plugin are both at `0.2.0`. See `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
+
+`0.2.0` adds follow-up conversations, filesystem-verified output and the offline test suite. It also covers the removal of the `research` task type, which was a breaking change that shipped under `0.1.1`.
 
 ## License
 

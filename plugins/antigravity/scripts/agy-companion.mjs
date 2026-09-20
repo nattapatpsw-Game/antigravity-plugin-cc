@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const AGY_BIN = 'agy';
@@ -153,8 +153,11 @@ function list(value) {
   return (Array.isArray(value) ? value : [value]).filter((v) => v !== true).map(String);
 }
 
-function buildAgyArgs({ prompt, model, effort, agent, mode, addDirs, timeout, skipPermissions }) {
+function buildAgyArgs({ prompt, model, effort, agent, mode, addDirs, timeout, skipPermissions, conversation }) {
   const args = ['-p', prompt, '--output-format', 'json'];
+  // Always an explicit id, never -c/--continue: that means "most recent conversation
+  // globally", which would silently attach to the Antigravity IDE or a parallel task.
+  if (conversation) args.push('--conversation', conversation);
   if (model) args.push('--model', model);
   if (effort && !model) args.push('--effort', effort);
   if (agent) args.push('--agent', agent);
@@ -223,8 +226,33 @@ function resolveShared(flags) {
     model: str(flags.model),
     agent: str(flags.agent),
     timeout: str(flags.timeout),
+    conversation: str(flags.conversation),
     addDirs: list(flags['add-dir']).map((d) => resolve(d)),
   };
+}
+
+// Shallow on purpose: --out can be a whole repo for a `code` task, and recursing it on
+// every run would cost more than it catches. Nested writes go unreported.
+function snapshotDir(dir) {
+  try {
+    return new Map(
+      readdirSync(dir, { withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => [entry.name, statSync(resolve(dir, entry.name)).mtimeMs])
+    );
+  } catch {
+    return new Map();
+  }
+}
+
+function diffSnapshots(dir, before, after) {
+  const filesCreated = [];
+  const filesModified = [];
+  for (const [name, mtime] of after) {
+    if (!before.has(name)) filesCreated.push(resolve(dir, name));
+    else if (before.get(name) !== mtime) filesModified.push(resolve(dir, name));
+  }
+  return { filesCreated, filesModified };
 }
 
 function cmdRun(flags) {
@@ -236,9 +264,10 @@ function cmdRun(flags) {
   const shared = resolveShared(flags);
   if (shared.error) return { status: 'ERROR', error: shared.error };
 
-  return executeAgy(
-    buildAgyArgs({ ...shared, prompt, skipPermissions: Boolean(flags['skip-permissions']) })
-  );
+  const args = buildAgyArgs({ ...shared, prompt, skipPermissions: Boolean(flags['skip-permissions']) });
+  if (flags['dry-run']) return { dryRun: true, argv: args };
+
+  return executeAgy(args);
 }
 
 function cmdTask(flags) {
@@ -264,17 +293,22 @@ function cmdTask(flags) {
   const framing = spec.framing ? spec.framing(out) : null;
   const addDirs = spec.writes ? [...new Set([...shared.addDirs, out])] : shared.addDirs;
 
-  const result = executeAgy(
-    buildAgyArgs({
-      ...shared,
-      prompt: framing ? `${prompt}\n\n${framing}` : prompt,
-      mode: shared.mode || spec.mode,
-      addDirs,
-      skipPermissions: Boolean(flags['skip-permissions']) || spec.skipPermissions,
-    })
-  );
+  const args = buildAgyArgs({
+    ...shared,
+    prompt: framing ? `${prompt}\n\n${framing}` : prompt,
+    mode: shared.mode || spec.mode,
+    addDirs,
+    skipPermissions: Boolean(flags['skip-permissions']) || spec.skipPermissions,
+  });
+  if (flags['dry-run']) return { dryRun: true, argv: args, taskType: type, outputDir: out };
 
-  return { ...result, taskType: type, outputDir: spec.writes ? out : null };
+  // Checked against the filesystem rather than taken from agy's prose, so a caller can
+  // tell the difference between a file that was claimed and one that exists.
+  const before = snapshotDir(out);
+  const result = executeAgy(args);
+  const changes = diffSnapshots(out, before, snapshotDir(out));
+
+  return { ...result, taskType: type, outputDir: out, ...changes };
 }
 
 function main() {

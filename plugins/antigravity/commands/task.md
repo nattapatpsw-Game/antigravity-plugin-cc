@@ -32,11 +32,20 @@ Task types:
 
 Do not treat a leading type word as routing when it is obviously part of the task text — for example "image processing library ไหนดี" is a question about libraries, not a request to generate an image named "processing library ไหนดี". When the rest of the request does not read as a task on its own, the leading word was content: keep it in the prompt and infer the type instead.
 
+## Refining a previous result
+
+Each result comes back with a trailing `[agy conversation: <id>]` line. When the user is refining the last Antigravity task rather than starting a new one — "make it blue instead", "shorter", "same chart but monthly" — pass `--conversation <id>` from that result. Antigravity then still has the earlier context, so the user does not have to restate the task.
+
+- Keep the original task type on a follow-up unless the user is clearly asking for something different.
+- Only use an id the user's own previous task returned. Never guess one, and never fall back to a bare `--continue`.
+- If there is no previous result to build on, just run it as a fresh task.
+
 ## Operating rules
 
-- `--out`, `--model` and `--effort` are routing flags. Preserve them for the forwarded call, but do not treat them as part of the natural-language task text.
+- `--out`, `--conversation`, `--model` and `--effort` are routing flags. Preserve them for the forwarded call, but do not treat them as part of the natural-language task text.
 - Leave `--model` and `--effort` unset unless the user explicitly asks for a specific one. Note that `--effort` is ignored whenever `--model` is given, because every agy model slug either bakes the effort in or rejects the flag.
 - Every type can write files. `--out` defaults to the current working directory — pass an explicit `--out` when the user names a destination, and make sure the directory already exists.
 - When files are produced, the response ends with their absolute paths. Keep those paths in the final answer; they are the only way the user can find the output.
+- The result also carries `filesCreated` and `filesModified`, checked against the filesystem rather than taken from Antigravity's prose. If they contradict what the response claims, say so — a task that reports writing a file but created nothing has failed, however confident the wording.
 - If the helper reports that `agy` is missing or unauthenticated, stop and tell the user to run `/antigravity:setup`.
 - If the user did not supply a request, ask what Antigravity should do.

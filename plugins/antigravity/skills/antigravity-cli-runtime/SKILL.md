@@ -32,10 +32,10 @@ Checks authentication via `agy models` (fails fast with a clear message when sig
 ### `task`
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task --type <image|ui|code|ask> --prompt "<task text>" [--out <dir>] [--model <slug>] [--effort low|medium|high] [--timeout <duration>]
+node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task --type <image|ui|code|ask> --prompt "<task text>" [--out <dir>] [--conversation <id>] [--model <slug>] [--effort low|medium|high] [--timeout <duration>] [--dry-run]
 ```
 
-Applies a per-type preset — agy flags plus prompt framing — on top of the `run` path. `--type` defaults to `ask`. A run that reaches agy returns agy's envelope plus `taskType` and `outputDir`; a request rejected during validation returns only `status` and `error`.
+Applies a per-type preset — agy flags plus prompt framing — on top of the `run` path. `--type` defaults to `ask`. A run that reaches agy returns agy's envelope plus `taskType`, `outputDir`, `filesCreated` and `filesModified`; a request rejected during validation returns only `status` and `error`.
 
 | type | agy flags | framing | writes |
 |---|---|---|---|
@@ -47,6 +47,18 @@ Applies a per-type preset — agy flags plus prompt framing — on top of the `r
 `--out` defaults to the current working directory and must already exist.
 
 `ask` and `code` stay on `accept-edits` rather than blanket auto-approval: that is enough for `write_to_file` to create new files (verified), while shell commands remain denied. `image` genuinely needs the blanket flag — `generate_image` reaches for `RunCommand`, which `accept-edits` does not cover.
+
+### Output verification
+
+`filesCreated` and `filesModified` come from comparing a listing of `--out` taken before the run with one taken after, by filename and mtime. They describe what is on disk, not what agy said it did, so they outrank the response text — a run that claims a file and reports an empty `filesCreated` produced nothing.
+
+The scan is **shallow and non-recursive**. For a `code` task `--out` can be an entire repository, and walking it on every run would cost far more than it catches, so writes into subdirectories are not reported.
+
+### Follow-up conversations
+
+Pass `--conversation <id>`, taken from an earlier result's `conversation_id`, to resume that conversation. Verified: a resumed turn keeps the earlier context, still honours `--add-dir` and `--dangerously-skip-permissions`, and can write files — a resumed `image` task asked only to "change the colour" reproduced the previous composition.
+
+Never use agy's `-c`/`--continue`. It means "the most recent conversation on this machine", which will silently attach to a conversation started in the Antigravity IDE or by a task running in parallel. The script only ever emits an explicit `--conversation <id>`.
 
 ### `run`
 
@@ -94,6 +106,7 @@ A run blocked by a headless permission denial looks identical, except that it al
 - `--effort` is dropped whenever `--model` is set. Every agy model slug either bakes the effort in (`gemini-3.8-flash-high`) or rejects the flag outright (`claude-sonnet-4-6` → `--effort is not supported for model`). Effort only selects a model when no model is named.
 - `--skip-permissions` maps to agy's `--dangerously-skip-permissions`; only the `image` and `ui` presets set it, because those runs reach for `RunCommand`, which `accept-edits` does not cover.
 - `--add-dir` is repeatable and is what allows agy to write outside its default workspace.
+- `--dry-run` returns the argv that would be passed to agy instead of spawning it. Nothing runs, so it is the cheap way to check what a preset actually does.
 
 ## Headless permission limits
 
