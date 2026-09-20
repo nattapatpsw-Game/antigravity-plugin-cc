@@ -55,7 +55,7 @@ Worth stating plainly, because it is not visible from `agy --help`:
 
 - **Images: yes.** `generate_image` is an agent *tool*, not a model or a CLI flag. None of the models in `agy models` are image models — they are all text/reasoning models — so the capability is invisible until you ask the agent for it.
 - **Other tools**: `search_web`, `read_url_content`, `write_to_file`, `replace_file_content`, `view_file`, `run_command`, `call_mcp_tool`, `schedule`, `manage_task`, and subagent orchestration (`define_subagent`, `invoke_subagent`, `manage_subagents`).
-- **Built-in skills**: `generative_ui` (self-contained HTML artifacts), `antigravity_guide`, `agy-customizations`, `migrate-workflows`, `permissioned-github`. Slash commands such as `/plan`, `/browser` and `/boost` expand inside `agy -p` by default.
+- **Built-in skills**: `generative_ui` (rich HTML artifacts — though it points at a CDN, so artifacts are not offline-safe unless you say so explicitly), `antigravity_guide`, `agy-customizations`, `migrate-workflows`, `permissioned-github`. Slash commands such as `/plan`, `/browser` and `/boost` expand inside `agy -p` by default.
 - **Headless limits**: in print mode nobody can answer a permission prompt, so some tools get denied and end the turn empty. `RunCommand` and `ReadUrlContent` are denied on a stock setup — which is exactly what the task presets work around.
 
 ### `agy-companion.mjs` commands
@@ -71,7 +71,8 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" setup
   "ready": true,
   "agy": { "available": true, "detail": "1.2.7" },
   "auth": { "loggedIn": true, "detail": "signed in" },
-  "nextSteps": []
+  "nextSteps": [],
+  "taskTypes": { "ask": { "description": "...", "writes": false } }
 }
 ```
 
@@ -96,6 +97,8 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task \
 
 `--out` defaults to the current working directory and must already exist for the three writing types. For those types the framing requires Antigravity to end its reply with the absolute path of every file it produced — headless output is useless if you cannot find it.
 
+A run that reaches `agy` returns Antigravity's envelope plus two fields of its own: `taskType` (the type that ran) and `outputDir` (the resolved `--out`, or `null` for the types that write nothing). A request rejected before that — unknown type, missing prompt, bad `--mode`, `--out` that does not exist — returns just `status` and `error`.
+
 `ui` bans remote resources item by item rather than just asking for a "self-contained" file. Antigravity's built-in `generative_ui` skill points at a Tailwind CDN, and left to itself it reads "self-contained" as "one file" — then pulls in Chart.js and Google Fonts, producing an artifact that renders blank with no network.
 
 `code` deliberately runs on `--mode accept-edits` rather than blanket auto-approval: file edits are approved, shell commands are not, and the framing steers Antigravity to its file-editing tools instead. That makes it **edits-only** — it cannot run a build or a test loop, so a task like "run the tests and fix what fails" will be denied partway through.
@@ -108,6 +111,8 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" run \
   [--model <slug>] \
   [--effort low|medium|high] \
   [--agent <name>] \
+  [--mode accept-edits|plan] \
+  [--add-dir <dir>] \
   [--timeout <duration>] \
   [--skip-permissions]
 ```
@@ -134,7 +139,15 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" run \
 - `--skip-permissions` maps to `agy`'s `--dangerously-skip-permissions` — only used when explicitly requested, since it grants unattended tool approval.
 - `--mode` is validated against `accept-edits|plan` by the script. `agy` only *warns* on an unknown value and then runs in the default mode, so an unvalidated typo would silently run write-enabled.
 - `--effort` is dropped whenever `--model` is set. Every model slug either bakes the effort in (`gemini-3.8-flash-high`) or rejects the flag outright (`claude-sonnet-4-6`), so effort only selects a model when none is named.
+- `--add-dir` is repeatable, and is what lets `agy` write outside its default workspace.
+- `--agent` is accepted but currently useless: `agy agents` returns an empty list on a stock install.
 - The script calls `spawnSync` without `shell: true`, so prompts containing quotes, `$`, or backticks pass through to `agy` safely.
+
+**`types`** — lists the task types and whether each writes files, without invoking `agy` at all:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" types
+```
 
 ### Success and failure
 
