@@ -182,6 +182,8 @@ Produces **one self-contained HTML file** that works with no network connection 
 
 Edits files in place under `--out` (default: current directory). **Edits-only** — see [the permissions note](#a-note-on-permissions) below.
 
+Need the tests run after it edits? Ask Claude Code itself — `run the tests` — rather than looking for a flag here. Claude Code already has shell access with a permission prompt, so you see each command before it runs, which is strictly better than handing the job to an agent that auto-approves everything.
+
 ### `ask` — everything else
 
 ```
@@ -195,16 +197,16 @@ Answers questions in prose. **It also creates files when you ask it to** — it 
 
 In headless mode nobody can click "approve", so each type gets the minimum permission it actually needs:
 
-| type | `agy` flags | Can create/edit files | Can run shell commands |
-|---|---|---|---|
-| `ask` | `--mode accept-edits` | yes | no |
-| `code` | `--mode accept-edits` | yes | no |
-| `image` | `--dangerously-skip-permissions` | yes | yes |
-| `ui` | `--dangerously-skip-permissions` | yes | yes |
+| type | `agy` flag | Creates / edits files | Runs shell commands | Why it has that |
+|---|---|---|---|---|
+| `ask` | `--mode accept-edits` | yes | no | Writing a file is all it ever needs |
+| `code` | `--mode accept-edits` | yes | no | Editing files *is* the job |
+| `image` | `--dangerously-skip-permissions` | yes | **yes** | `generate_image` reaches for `RunCommand`, which `accept-edits` doesn't cover |
+| `ui` | `--dangerously-skip-permissions` | yes | **yes** | Same — verified by testing, not assumed |
 
-`ask` and `code` stay on `accept-edits` because that turns out to be enough for creating and editing files, while leaving shell commands denied. The practical consequence: **`code` cannot run a build or a test loop.** A task like "run the tests and fix what fails" will be denied partway through.
+**What "yes" in the shell column really means.** `--dangerously-skip-permissions` doesn't grant shell access specifically — it auto-approves *everything* for that run, with no prompt: deleting files, installing packages, network calls. And `--add-dir` grants access to a directory, it does not fence the process into one. So for `image` and `ui`, point `--out` somewhere you'd be comfortable losing.
 
-`image` and `ui` need the blanket flag because those runs reach for `RunCommand`, which `accept-edits` does not cover.
+**What it means for `code`.** It cannot run a build or a test loop — "run the tests and fix what fails" gets denied partway through. That's deliberate, not an oversight: Claude Code is already in the same window with shell access *and* a permission prompt, so ask it to run the tests and you see every command before it executes. Handing that job to an agent that approves itself would be worse, not more convenient.
 
 ---
 
