@@ -181,6 +181,12 @@ function normalizeOutcome(envelope) {
     return fail(envelope.error || `agy returned status ${status || '(missing)'}`);
   }
   if (!String(envelope.response || '').trim()) {
+    const denied = (Array.isArray(envelope.denied_actions) ? envelope.denied_actions : [])
+      .map((d) => d.display_name || d.action)
+      .filter(Boolean);
+    if (denied.length) {
+      return fail(`agy ended the turn with no answer because these actions were denied in headless mode: ${denied.join(', ')}`);
+    }
     return fail('agy returned an empty response — the run most likely hit --print-timeout; retry with a longer --timeout');
   }
   return envelope;

@@ -82,7 +82,9 @@ agy's status enum is `SUCCESS`, `ERROR`, `CANCELLED`, `TIMEOUT` — **not** `OK`
 - `status: "SUCCESS"` with a non-empty `response` → success.
 - Anything else → `status` is rewritten to `"ERROR"`, `error` carries the reason, and the original value is preserved in `agyStatus`.
 
-The case that forces this: **a `--print-timeout` expiry is reported by agy as `status: "SUCCESS"` with an empty `response`**, not as `TIMEOUT`. Without normalization a timed-out run would be relayed as a valid empty answer. A run blocked by headless permission denial behaves the same way and additionally populates `denied_actions`.
+The case that forces this: **a `--print-timeout` expiry is reported by agy as `status: "SUCCESS"` with an empty `response`**, not as `TIMEOUT`. Without normalization a timed-out run would be relayed as a valid empty answer.
+
+A run blocked by a headless permission denial looks identical, except that it also populates `denied_actions`. The script checks that list first and names the blocked tools in `error`, so the two are never confused — an empty response is only attributed to a timeout when nothing was denied.
 
 ## Flag rules
 

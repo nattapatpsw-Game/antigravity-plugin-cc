@@ -141,7 +141,9 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" run \
 - `status: "SUCCESS"` with a non-empty `response` → success.
 - Anything else → `status` becomes `"ERROR"`, `error` explains why, and the original value is kept in `agyStatus`.
 
-That normalization is load-bearing: **a `--print-timeout` expiry comes back from `agy` as `status: "SUCCESS"` with an empty `response`**, not as `TIMEOUT`. A run blocked by a headless permission prompt looks the same and additionally populates `denied_actions`. Without this, a dead run would be relayed as a valid empty answer.
+That normalization is load-bearing: **a `--print-timeout` expiry comes back from `agy` as `status: "SUCCESS"` with an empty `response`**, not as `TIMEOUT`. Without it, a dead run would be relayed as a valid empty answer.
+
+A run blocked by a headless permission prompt looks identical, except that it also populates `denied_actions`. The script checks that list first and names the blocked tools in `error` — so an empty response is only blamed on a timeout when nothing was actually denied.
 
 ## Prerequisites
 
