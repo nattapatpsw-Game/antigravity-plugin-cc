@@ -91,10 +91,12 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task \
 | `ask` *(default)* | general question or discussion | — | no |
 | `research` | web search, answers with sources | — | no |
 | `image` | generates image file(s) via `generate_image` | `--dangerously-skip-permissions`, `--add-dir <out>` | yes |
-| `ui` | builds one self-contained HTML artifact | `--dangerously-skip-permissions`, `--add-dir <out>` | yes |
+| `ui` | builds one HTML artifact that works offline | `--dangerously-skip-permissions`, `--add-dir <out>` | yes |
 | `code` | edits code in place | `--mode accept-edits`, `--add-dir <out>` | yes |
 
 `--out` defaults to the current working directory and must already exist for the three writing types. For those types the framing requires Antigravity to end its reply with the absolute path of every file it produced — headless output is useless if you cannot find it.
+
+`ui` bans remote resources item by item rather than just asking for a "self-contained" file. Antigravity's built-in `generative_ui` skill points at a Tailwind CDN, and left to itself it reads "self-contained" as "one file" — then pulls in Chart.js and Google Fonts, producing an artifact that renders blank with no network.
 
 `code` deliberately runs on `--mode accept-edits` rather than blanket auto-approval: file edits are approved, shell commands are not, and the framing steers Antigravity to its file-editing tools instead. That makes it **edits-only** — it cannot run a build or a test loop, so a task like "run the tests and fix what fails" will be denied partway through.
 

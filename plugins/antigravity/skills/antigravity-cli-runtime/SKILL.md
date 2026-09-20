@@ -42,7 +42,7 @@ Applies a per-type preset — agy flags plus prompt framing — on top of the `r
 | `ask` | — | — | no |
 | `research` | — | search-only; no URL fetching, no shell, no files | no |
 | `image` | `--dangerously-skip-permissions`, `--add-dir <out>` | use `generate_image`, save to `<out>`, end with absolute paths | yes |
-| `ui` | `--dangerously-skip-permissions`, `--add-dir <out>` | `generative_ui` skill, one self-contained HTML file in `<out>`, end with absolute paths | yes |
+| `ui` | `--dangerously-skip-permissions`, `--add-dir <out>` | one HTML file in `<out>` with no network dependencies at all, end with absolute paths | yes |
 | `code` | `--mode accept-edits`, `--add-dir <out>` | file-editing tools only, no shell, list changed files | yes |
 
 `--out` defaults to the current working directory and must already exist for the three writing types.
@@ -97,6 +97,8 @@ A run blocked by a headless permission denial looks identical, except that it al
 ## Headless permission limits
 
 In print mode nobody can answer a permission prompt, so denied tool calls end the turn with an empty response and a `denied_actions` list. Observed denials: `RunCommand` and `ReadUrlContent`. This is why the `code` and `research` presets explicitly steer agy away from those tools in their framing rather than relying on it to guess.
+
+The `ui` preset carries a related workaround for a different reason: the built-in `generative_ui` skill tells agy to load Tailwind from a gstatic CDN, which is fine inside the Antigravity app but produces a file that renders blank offline. Asking for a "self-contained" file is not enough — agy reads that as "one file" and still pulls Chart.js and Google Fonts. The preset therefore bans remote resources item by item and asks agy to re-check the file before finishing.
 
 ## Notes
 

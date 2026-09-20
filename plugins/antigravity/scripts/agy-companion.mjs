@@ -47,8 +47,11 @@ const TASK_TYPES = {
     writes: true,
     mode: null,
     skipPermissions: true,
+    // "Self-contained" alone is not enough — the generative_ui skill itself points at a
+    // Tailwind CDN, so agy will happily pull Chart.js and Google Fonts and call it one
+    // file. The ban has to be spelled out or the artifact breaks with no network.
     framing: (out) =>
-      `Build this as a single self-contained HTML file using your generative_ui skill, and write it into the directory ${out}. It must render correctly when opened directly in a browser. End your reply with the absolute path of every file you created, one per line.`,
+      `Build this as a single HTML file and write it into the directory ${out}. It must work with no network access at all: no CDN script tags, no external stylesheets, no Google Fonts or other remote fonts, no remote images. Inline every bit of CSS and JavaScript, draw any chart with inline SVG or canvas instead of a charting library, use system font stacks only, and embed any image as a data URI. Before you finish, check the file and confirm it contains no http:// or https:// resource references. End your reply with the absolute path of every file you created, one per line.`,
   },
   code: {
     description: 'Write or modify code in the target directory.',
