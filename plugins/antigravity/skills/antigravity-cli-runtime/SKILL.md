@@ -59,10 +59,12 @@ The scan is **shallow and non-recursive**. For a `code` task `--out` can be an e
 Every run that reaches agy also returns `metaLine`, a ready-formatted string:
 
 ```
-[agy conversation: bab277a7-33cb-459b-86f3-4d92b31b4557 · 13,053 tokens · 3.5s]
+[agy conversation: bab277a7-33cb-459b-86f3-4d92b31b4557 · 3.5s]
 ```
 
-Append it verbatim as the final line of the answer. It is built in the script rather than composed by the caller, so the forwarding layer never has to format numbers and the shape stays consistent. It carries the id needed to resume the conversation, and the token count and wall time the run cost.
+Append it verbatim as the final line of the answer. It is built in the script rather than composed by the caller, so the forwarding layer never has to format anything and the shape stays consistent. It carries the id needed to resume the conversation and the wall time the run took.
+
+Token counts are deliberately excluded. agy's total is dominated by its own system prompt — a one-word answer still reports five figures — so it looks alarming while saying nothing about the task, and it only maps to money for `GEMINI_API_KEY` users rather than the default account auth. The raw `usage` object remains in the JSON for anyone who wants it.
 
 ### Follow-up conversations
 

@@ -191,15 +191,19 @@ function normalizeOutcome(envelope) {
 }
 
 // Built here rather than left to the caller to compose, so the forwarding layer stays
-// dumb and the number formatting is in one place. The conversation id is what makes a
-// follow-up possible; the tokens and duration are what the run cost.
+// dumb and the formatting is in one place. The conversation id is what makes a follow-up
+// possible; the duration says whether the run was light or heavy.
+//
+// Token counts are deliberately left out. agy's total is dominated by its own system
+// prompt — a one-word answer still reports five figures — so it reads as alarming
+// without saying anything about the task, and it only maps to money for GEMINI_API_KEY
+// users rather than the default account auth. The raw `usage` object stays in the JSON
+// for anyone who wants it.
 function buildMetaLine(envelope) {
   const id = envelope.conversation_id;
   if (!id) return null;
 
   const parts = [`conversation: ${id}`];
-  const tokens = envelope.usage?.total_tokens;
-  if (tokens) parts.push(`${tokens.toLocaleString('en-US')} tokens`);
   const seconds = envelope.duration_seconds;
   if (seconds) parts.push(`${Number(seconds).toFixed(1)}s`);
 

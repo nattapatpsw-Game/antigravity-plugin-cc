@@ -215,13 +215,13 @@ You don't have to restate a task to change it. Every result carries the Antigrav
 
 The second request never mentions a triangle. Antigravity still has the first turn's context, so it keeps the composition and changes only what you asked for. The same works for `ui` ("same chart but monthly"), `code` ("now add a test for it") and `ask` ("shorter").
 
-Every answer ends with a line showing which conversation it belongs to and what the run cost:
+Every answer ends with a line showing which conversation it belongs to and how long the run took:
 
 ```
-[agy conversation: bab277a7-33cb-459b-86f3-4d92b31b4557 · 13,053 tokens · 3.5s]
+[agy conversation: bab277a7-33cb-459b-86f3-4d92b31b4557 · 3.5s]
 ```
 
-That token count is the whole run, including Antigravity's own system prompt — which is why even a one-word answer isn't free.
+Token counts are deliberately left out: Antigravity's total is dominated by its own system prompt, so even a one-word answer reports five figures. That reads as alarming while saying nothing useful about your task. The raw `usage` object is still in the JSON if you want it.
 
 Under the hood this resumes a specific conversation by id — never "the most recent conversation", which would attach to whatever you last ran in the Antigravity IDE or to a task running in parallel.
 
@@ -475,7 +475,7 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 
 Marketplace and plugin are both at `0.3.0`. See `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
 
-- **0.3.0** — MIT license, token usage and duration reported with every answer, dead `--agent` flag removed.
+- **0.3.0** — MIT license, run duration and conversation id reported with every answer, dead `--agent` flag removed.
 - **0.2.0** — follow-up conversations, filesystem-verified output, offline test suite. Also covered the removal of the `research` task type, a breaking change that had shipped under `0.1.1`.
 
 ## License
