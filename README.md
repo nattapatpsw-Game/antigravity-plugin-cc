@@ -96,7 +96,7 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task \
 
 `--out` defaults to the current working directory and must already exist for the three writing types. For those types the framing requires Antigravity to end its reply with the absolute path of every file it produced — headless output is useless if you cannot find it.
 
-`code` deliberately runs on `--mode accept-edits` rather than blanket auto-approval: file edits are approved, shell commands are not, and the framing steers Antigravity to its file-editing tools instead.
+`code` deliberately runs on `--mode accept-edits` rather than blanket auto-approval: file edits are approved, shell commands are not, and the framing steers Antigravity to its file-editing tools instead. That makes it **edits-only** — it cannot run a build or a test loop, so a task like "run the tests and fix what fails" will be denied partway through.
 
 **`run`** — the raw escape hatch, with no presets or framing. Returns Antigravity's own response envelope:
 
