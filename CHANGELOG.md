@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0
+
+Both adopted from [simplybychris/antigravity-plugin-cc](https://github.com/simplybychris/antigravity-plugin-cc) after comparing the two plugins.
+
+- `--name` sets the output filename. Antigravity names its own files, so a generated image arrived as `red_circle.jpg` with no way to ask for `hero.jpg`. Implemented as a prompt block rather than a flag passthrough, because the name is the model's decision; omitting it leaves the prompt byte-identical.
+- Model aliases filled out: `flash-medium`, `flash-low`, `pro-low` and `gpt-oss` join the existing four. Raw slugs are unaffected.
+
 ## 0.6.0
 
 - `/antigravity:help` — a quick reference card for commands, task types, flags and model aliases, without leaving the session. Claude Code's own `/help` lists the commands but not the types and flags, which is where this plugin's surface actually lives. The task list is read from the plugin at runtime rather than written into the card, so it cannot drift.

@@ -133,9 +133,13 @@ check('--agent is never forwarded', () => {
 check('model aliases resolve to full slugs', () => {
   const expected = {
     flash: 'gemini-3.8-flash-high',
+    'flash-medium': 'gemini-3.8-flash-medium',
+    'flash-low': 'gemini-3.8-flash-low',
     pro: 'gemini-3.1-pro-high',
+    'pro-low': 'gemini-3.1-pro-low',
     sonnet: 'claude-sonnet-4-6',
     opus: 'claude-opus-4-6-thinking',
+    'gpt-oss': 'gpt-oss-120b-medium',
   };
   for (const [alias, slug] of Object.entries(expected)) {
     const argv = argvOf('task', '--type', 'ask', '--prompt', 'x', '--model', alias);
@@ -192,6 +196,22 @@ check('ask is told the shell is unavailable', () => {
   // denies, and the run dies empty instead of answering.
   const prompt = argvOf('task', '--type', 'ask', '--prompt', 'x')[1];
   return prompt.includes('Shell commands are not available') ? null : 'the no-shell notice is gone';
+});
+
+check('--name reaches the prompt', () => {
+  const prompt = argvOf('task', '--type', 'image', '--prompt', 'x', '--name', 'hero')[1];
+  return prompt.includes('Name the file you create "hero"') ? null : `not in prompt: ${prompt.slice(-160)}`;
+});
+
+check('omitting --name leaves the prompt untouched', () => {
+  // The naming block is appended, so its absence must change nothing at all.
+  for (const type of TYPES) {
+    const withName = argvOf('task', '--type', type, '--prompt', 'x', '--name', 'hero')[1];
+    const without = argvOf('task', '--type', type, '--prompt', 'x')[1];
+    if (!withName.startsWith(without)) return `${type}: the base prompt changed when --name was added`;
+    if (without.includes('Name the file')) return `${type}: naming text leaked in without --name`;
+  }
+  return null;
 });
 
 check('--add-dir is forwarded and repeatable', () => {

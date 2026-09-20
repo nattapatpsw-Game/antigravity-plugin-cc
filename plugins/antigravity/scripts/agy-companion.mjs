@@ -22,9 +22,13 @@ const SUCCESS_STATUSES = new Set(['SUCCESS', 'OK']);
 // to remember `gemini-3.8-flash-high`.
 const MODEL_ALIASES = {
   flash: 'gemini-3.8-flash-high',
+  'flash-medium': 'gemini-3.8-flash-medium',
+  'flash-low': 'gemini-3.8-flash-low',
   pro: 'gemini-3.1-pro-high',
+  'pro-low': 'gemini-3.1-pro-low',
   sonnet: 'claude-sonnet-4-6',
   opus: 'claude-opus-4-6-thinking',
+  'gpt-oss': 'gpt-oss-120b-medium',
 };
 
 // Named prompt blocks, composed per task type below. Each string is load-bearing — the
@@ -46,6 +50,10 @@ const BLOCKS = {
   workIn: (out) => `Work inside the directory ${out}.`,
 
   reportPaths: 'End your reply with the absolute path of every file you created, one per line.',
+
+  // agy names the files it writes, so this is the only way to influence the name.
+  nameFile: (name) =>
+    `Name the file you create "${name}", keeping an extension appropriate to its format. If the request produces more than one file, number them from "${name}".`,
 
   listChangedFiles: 'When you are done, list every file you created or modified with its absolute path.',
 
@@ -377,7 +385,10 @@ function cmdTask(flags) {
     return { status: 'ERROR', error: `--out directory does not exist: ${out}` };
   }
 
-  const framing = spec.blocks(out).join(' ');
+  const name = str(flags.name);
+  const blocks = spec.blocks(out);
+  if (name) blocks.push(BLOCKS.nameFile(name));
+  const framing = blocks.join(' ');
   const addDirs = spec.writes ? [...new Set([...shared.addDirs, out])] : shared.addDirs;
 
   const args = buildAgyArgs({

@@ -43,7 +43,7 @@ Each result comes back with a trailing `[agy conversation: <id>]` line. When the
 
 ## Operating rules
 
-- `--out`, `--conversation`, `--model` and `--effort` are routing flags. Preserve them for the forwarded call, but do not treat them as part of the natural-language task text.
+- `--out`, `--name`, `--conversation`, `--model` and `--effort` are routing flags. `--name` sets the output filename; pass it through when the user names the file they want. Preserve them for the forwarded call, but do not treat them as part of the natural-language task text.
 - Leave `--model` and `--effort` unset unless the user explicitly asks for a specific one. Note that `--effort` is ignored whenever `--model` is given, because every agy model slug either bakes the effort in or rejects the flag.
 - Every type can write files. `--out` defaults to the current working directory — pass an explicit `--out` when the user names a destination, and make sure the directory already exists.
 - When files are produced, the response ends with their absolute paths. Keep those paths in the final answer; they are the only way the user can find the output.

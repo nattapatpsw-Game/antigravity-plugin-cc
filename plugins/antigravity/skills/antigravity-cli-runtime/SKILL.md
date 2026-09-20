@@ -32,7 +32,7 @@ Checks authentication via `agy models` (fails fast with a clear message when sig
 ### `task`
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task --type <image|ui|code|ask> --prompt "<task text>" [--out <dir>] [--conversation <id>] [--model <slug>] [--effort low|medium|high] [--timeout <duration>] [--dry-run]
+node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task --type <image|ui|code|ask> --prompt "<task text>" [--out <dir>] [--name <name>] [--conversation <id>] [--model <slug>] [--effort low|medium|high] [--timeout <duration>] [--dry-run]
 ```
 
 Applies a per-type preset — agy flags plus prompt framing — on top of the `run` path. `--type` defaults to `ask`. A run that reaches agy returns agy's envelope plus `taskType`, `outputDir`, `filesCreated` and `filesModified`; a request rejected during validation returns only `status` and `error`.
@@ -44,7 +44,7 @@ Applies a per-type preset — agy flags plus prompt framing — on top of the `r
 | `ui` | `--dangerously-skip-permissions`, `--add-dir <out>` | one HTML file in `<out>` with no network dependencies at all, end with absolute paths | yes |
 | `code` | `--mode accept-edits`, `--add-dir <out>` | file-editing tools only, no shell, list changed files | yes |
 
-`--out` defaults to the current working directory and must already exist.
+`--out` defaults to the current working directory and must already exist. `--name` sets the output filename by appending a naming block to the framing — agy chooses the name otherwise, so there is no flag to pass through for this. Omitting it leaves the prompt byte-identical, which the smoke test asserts.
 
 `ask` and `code` stay on `accept-edits` rather than blanket auto-approval: that is enough for `write_to_file` to create new files (verified), while shell commands remain denied. `image` genuinely needs the blanket flag — `generate_image` reaches for `RunCommand`, which `accept-edits` does not cover.
 

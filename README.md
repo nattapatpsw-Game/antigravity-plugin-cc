@@ -278,6 +278,15 @@ The directory must already exist — the plugin won't create it, and will tell y
 
 Working inside a git repo, `--out ./output` is a good habit: generated images and HTML stay out of your project root, and this repo's `.gitignore` already covers `output/`.
 
+**Naming the file.** Antigravity picks the filename itself — you get `red_circle.jpg`, not `hero.jpg`. Pass `--name` when the name matters:
+
+```
+/antigravity:task image --name hero --out ./assets A blue mountain, flat style
+→ ./assets/hero.jpg
+```
+
+The extension is still chosen to match the format, and several files get numbered from that name.
+
 Every reply that produces files ends with their absolute paths. This is deliberate: in headless mode there's no file tree to click through, so a path you can copy is the only way to find the output.
 
 Those paths are also **checked against the filesystem**, not just taken from what Antigravity says. The plugin lists the output directory before and after each run and reports what actually appeared or changed. If the reply claims a file that isn't there, you're told — which matters because image generation does occasionally fail a turn, and a confident-sounding reply is not evidence.
@@ -292,14 +301,15 @@ Leave `--model` unset and `agy` uses its configured default. To override:
 /antigravity:task --model claude-sonnet-4-6 code Refactor this parser
 ```
 
-Four aliases save you remembering slugs:
+Aliases save you remembering slugs:
 
 | Alias | Resolves to |
 |---|---|
-| `flash` | `gemini-3.8-flash-high` |
-| `pro` | `gemini-3.1-pro-high` |
+| `flash` / `flash-medium` / `flash-low` | `gemini-3.8-flash-high` / `-medium` / `-low` |
+| `pro` / `pro-low` | `gemini-3.1-pro-high` / `-low` |
 | `sonnet` | `claude-sonnet-4-6` |
 | `opus` | `claude-opus-4-6-thinking` |
+| `gpt-oss` | `gpt-oss-120b-medium` |
 
 Full slugs still work. Models available on a stock install (`agy models`):
 
@@ -409,7 +419,7 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 
 ## Versioning
 
-Marketplace and plugin are both at `0.6.0`. See [CHANGELOG.md](CHANGELOG.md), `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
+Marketplace and plugin are both at `0.7.0`. See [CHANGELOG.md](CHANGELOG.md), `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
 
 Each release is tagged, so you can pin to one instead of tracking the default branch:
 
@@ -417,7 +427,7 @@ Each release is tagged, so you can pin to one instead of tracking the default br
 {
   "source": "github",
   "repo": "nattapatpsw-Game/antigravity-plugin-cc",
-  "ref": "v0.6.0"
+  "ref": "v0.7.0"
 }
 ```
 

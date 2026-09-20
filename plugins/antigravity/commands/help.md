@@ -31,6 +31,7 @@ Then show the user the reference below, with the task-type table filled in from 
 | Flag | Effect |
 |---|---|
 | `--out <dir>` | Where files go. Defaults to the current directory, and must already exist. |
+| `--name <name>` | What the file is called. Without it, Antigravity picks the name. |
 | `--conversation <id>` | Continue an earlier task. The id is on the `[agy conversation: …]` line of its reply. |
 | `--fresh` | Force a new conversation instead of continuing one. |
 | `--model <name>` | `flash`, `pro`, `sonnet`, `opus`, or any full slug from `agy models`. |
