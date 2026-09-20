@@ -409,6 +409,18 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 
 Marketplace and plugin are both at `0.5.0`. See [CHANGELOG.md](CHANGELOG.md), `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
 
+Each release is tagged, so you can pin to one instead of tracking the default branch:
+
+```json
+{
+  "source": "github",
+  "repo": "nattapatpsw-Game/antigravity-plugin-cc",
+  "ref": "v0.5.0"
+}
+```
+
+**If you're contributing:** because `plugin.json` declares an explicit `version`, Claude Code serves installed users the cached copy until that string changes. Any change under `plugins/` therefore needs a version bump in **both** manifests, or existing users silently never receive it. Changes to the README, CHANGELOG or CI don't — nothing outside `plugins/` is loaded at runtime. CI fails the build if the two manifests disagree.
+
 ## License
 
 [MIT](LICENSE) — free to use, modify and redistribute, including commercially. The only condition is that the copyright notice travels with it.
