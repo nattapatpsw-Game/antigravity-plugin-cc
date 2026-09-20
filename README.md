@@ -1,4 +1,4 @@
-# antigravity-plugin-cc
+# Antigravity-plugin-cc
 
 A [Claude Code](https://claude.com/claude-code) plugin that lets you hand a task to Google's [Antigravity](https://antigravity.google/) agent (`agy`) without leaving your Claude Code session — and get the result back inline.
 
