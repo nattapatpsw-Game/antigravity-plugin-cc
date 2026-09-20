@@ -34,13 +34,20 @@ For the script API, outcome handling and design reasoning, see **[docs/internals
 
 ## Quick start
 
+Run these four in Claude Code:
+
 ```
 /plugin marketplace add nattapatpsw-Game/antigravity-plugin-cc
 /plugin install antigravity@antigravity-plugin-cc
+/reload-plugins
 /antigravity:setup
 ```
 
-Once setup reports `ready: true`:
+Skip the reload if the install summary didn't ask for it — Claude Code says `Run /reload-plugins to activate.` when it's needed. Running it anyway is harmless.
+
+`/antigravity:setup` then checks that the Antigravity CLI is installed and signed in, and walks you through whatever is missing.
+
+Once it reports `ready: true`:
 
 ```
 /antigravity:task image A watercolour of a lighthouse at dawn
@@ -56,26 +63,28 @@ Once setup reports `ready: true`:
 | Requirement | Notes |
 |---|---|
 | [Claude Code](https://claude.com/claude-code) | With plugin support. |
-| [Node.js](https://nodejs.org/) on `PATH` | Runs `agy-companion.mjs`. No npm packages required — the script has zero dependencies. |
+| [Node.js](https://nodejs.org/) 18 or later, on `PATH` | Runs `agy-companion.mjs`. No npm packages needed — the script has zero dependencies. CI tests on Node 20 across Linux, macOS and Windows. |
 | [Antigravity CLI](https://antigravity.google/docs/cli/install/) (`agy`) | Installed **and signed in**. `/antigravity:setup` checks both and walks you through whatever is missing. |
+
+Tasks run on **your own Antigravity account** and count against its usage limits. This plugin adds no cost of its own — it is a wrapper around a CLI you are already signed in to.
 
 ---
 
 ## Installation
 
-Add this repo as a plugin marketplace, then install the plugin from it.
+Add this repo as a plugin marketplace, install the plugin from it, then reload.
 
-**From GitHub:**
+**1. Add the marketplace**
 
 ```
 /plugin marketplace add nattapatpsw-Game/antigravity-plugin-cc
-/plugin install antigravity@antigravity-plugin-cc
 ```
 
-**From a local clone** (useful if you're modifying the plugin):
+Working on the plugin itself? Point it at a local clone instead: `/plugin marketplace add /path/to/antigravity-plugin-cc`
+
+**2. Install the plugin**
 
 ```
-/plugin marketplace add /path/to/antigravity-plugin-cc
 /plugin install antigravity@antigravity-plugin-cc
 ```
 
@@ -88,6 +97,22 @@ Claude Code will prompt you to enable it. You can also set it directly in `~/.cl
   }
 }
 ```
+
+**3. Reload, if the install summary asks you to**
+
+Claude Code prints `Run /reload-plugins to activate.` when the new commands need a reload before they appear:
+
+```
+/reload-plugins
+```
+
+**4. Check you're ready**
+
+```
+/antigravity:setup
+```
+
+This reports whether `agy` is installed and signed in. Anything missing, it tells you how to fix — see below.
 
 ### Installing and signing in to `agy`
 
