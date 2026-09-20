@@ -273,6 +273,8 @@ Output lands in the **current working directory** unless you pass `--out`:
 
 The directory must already exist — the plugin won't create it, and will tell you so rather than failing deep inside `agy`.
 
+Working inside a git repo, `--out ./output` is a good habit: generated images and HTML stay out of your project root, and this repo's `.gitignore` already covers `output/`.
+
 Every reply that produces files ends with their absolute paths. This is deliberate: in headless mode there's no file tree to click through, so a path you can copy is the only way to find the output.
 
 Those paths are also **checked against the filesystem**, not just taken from what Antigravity says. The plugin lists the output directory before and after each run and reports what actually appeared or changed. If the reply claims a file that isn't there, you're told — which matters because image generation does occasionally fail a turn, and a confident-sounding reply is not evidence.

@@ -1,4 +1,19 @@
-node_modules/
+# Secrets. This plugin's own docs tell people to set GEMINI_API_KEY for headless auth,
+# so a .env landing in a clone is a realistic way to leak one.
+.env
+.env.*
+
+# OS cruft
 .DS_Store
+**/.DS_Store
 Thumbs.db
+
+# Logs
 *.log
+
+# Node, if anyone ever adds tooling. The plugin itself has zero dependencies.
+node_modules/
+
+# A safe place for generated artifacts. Tasks write to the current directory unless you
+# pass --out, so `--out ./output` keeps images and HTML from landing in the repo root.
+output/
