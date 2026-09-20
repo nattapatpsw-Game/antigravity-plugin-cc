@@ -153,14 +153,13 @@ function list(value) {
   return (Array.isArray(value) ? value : [value]).filter((v) => v !== true).map(String);
 }
 
-function buildAgyArgs({ prompt, model, effort, agent, mode, addDirs, timeout, skipPermissions, conversation }) {
+function buildAgyArgs({ prompt, model, effort, mode, addDirs, timeout, skipPermissions, conversation }) {
   const args = ['-p', prompt, '--output-format', 'json'];
   // Always an explicit id, never -c/--continue: that means "most recent conversation
   // globally", which would silently attach to the Antigravity IDE or a parallel task.
   if (conversation) args.push('--conversation', conversation);
   if (model) args.push('--model', model);
   if (effort && !model) args.push('--effort', effort);
-  if (agent) args.push('--agent', agent);
   if (mode) args.push('--mode', mode);
   for (const dir of addDirs) args.push('--add-dir', dir);
   args.push('--print-timeout', String(timeout || DEFAULT_PRINT_TIMEOUT));
@@ -191,6 +190,22 @@ function normalizeOutcome(envelope) {
   return envelope;
 }
 
+// Built here rather than left to the caller to compose, so the forwarding layer stays
+// dumb and the number formatting is in one place. The conversation id is what makes a
+// follow-up possible; the tokens and duration are what the run cost.
+function buildMetaLine(envelope) {
+  const id = envelope.conversation_id;
+  if (!id) return null;
+
+  const parts = [`conversation: ${id}`];
+  const tokens = envelope.usage?.total_tokens;
+  if (tokens) parts.push(`${tokens.toLocaleString('en-US')} tokens`);
+  const seconds = envelope.duration_seconds;
+  if (seconds) parts.push(`${Number(seconds).toFixed(1)}s`);
+
+  return `[agy ${parts.join(' · ')}]`;
+}
+
 function executeAgy(args) {
   const r = runAgy(args, undefined);
   if (r.error) {
@@ -203,7 +218,8 @@ function executeAgy(args) {
   }
 
   try {
-    return normalizeOutcome(JSON.parse(stdout));
+    const outcome = normalizeOutcome(JSON.parse(stdout));
+    return { ...outcome, metaLine: buildMetaLine(outcome) };
   } catch {
     return { status: 'ERROR', error: 'failed to parse agy output as JSON', raw: stdout.slice(0, 2000) };
   }
@@ -224,7 +240,6 @@ function resolveShared(flags) {
     mode,
     effort,
     model: str(flags.model),
-    agent: str(flags.agent),
     timeout: str(flags.timeout),
     conversation: str(flags.conversation),
     addDirs: list(flags['add-dir']).map((d) => resolve(d)),

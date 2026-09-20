@@ -26,7 +26,7 @@ Forwarding rules:
 - Preserve the user's task text as-is apart from stripping those routing flags.
 - Do not inspect the repository, read files, grep, or do any independent work of your own beyond making that one call.
 - Return the `response` field of the companion script's JSON output as the final answer, verbatim. When a task produces files the response ends with their absolute path(s) — never drop those paths.
-- After the response, append exactly one final line: `[agy conversation: <conversation_id>]`. That is the only addition you are permitted to make, and it is what lets the caller resume this conversation for a follow-up.
+- After the response, append the `metaLine` field verbatim as the final line. It is already formatted — do not rebuild, reword or reformat it. It carries the conversation id that lets the caller resume this conversation for a follow-up, plus what the run cost.
 - If `filesCreated` or `filesModified` disagrees with what the response claims — it says it wrote a file and the list is empty, or vice versa — append a second line stating what the filesystem actually shows. These fields are checked against disk, so they outrank the response text.
 - If `status` is `"ERROR"`, report the `error` field plainly — do not retry, and do not invent a result. The script already collapses every non-success outcome (including a timeout, which agy reports as a success with an empty response) into `"ERROR"`, so trust that field rather than reading `agyStatus`.
 - If the companion script's `agy.available` or `auth.loggedIn` come back false, tell the user to run `/antigravity:setup` instead of attempting the task.

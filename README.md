@@ -215,6 +215,14 @@ You don't have to restate a task to change it. Every result carries the Antigrav
 
 The second request never mentions a triangle. Antigravity still has the first turn's context, so it keeps the composition and changes only what you asked for. The same works for `ui` ("same chart but monthly"), `code` ("now add a test for it") and `ask` ("shorter").
 
+Every answer ends with a line showing which conversation it belongs to and what the run cost:
+
+```
+[agy conversation: bab277a7-33cb-459b-86f3-4d92b31b4557 · 13,053 tokens · 3.5s]
+```
+
+That token count is the whole run, including Antigravity's own system prompt — which is why even a one-word answer isn't free.
+
 Under the hood this resumes a specific conversation by id — never "the most recent conversation", which would attach to whatever you last ran in the Antigravity IDE or to a task running in parallel.
 
 ## Where output goes
@@ -353,7 +361,7 @@ The raw escape hatch: no presets, no framing.
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" run \
   --prompt "<task text>" \
-  [--conversation <id>] [--model <slug>] [--effort low|medium|high] [--agent <name>] \
+  [--conversation <id>] [--model <slug>] [--effort low|medium|high] \
   [--mode accept-edits|plan] [--add-dir <dir>] \
   [--timeout <duration>] [--skip-permissions] [--dry-run]
 ```
@@ -385,7 +393,7 @@ Flag behaviour:
 - **`--skip-permissions`** maps to `--dangerously-skip-permissions`. Grants unattended tool approval, so it's only set where a preset genuinely needs it.
 - **`--conversation`** resumes a specific conversation by id. The script never emits `agy`'s bare `-c`/`--continue`, which means "most recent conversation on this machine" and would attach to the Antigravity IDE or a parallel task.
 - **`--dry-run`** returns the argv that *would* be passed to `agy` instead of spawning it — the cheap way to see what a preset actually does.
-- **`--agent`** is accepted but currently useless: `agy agents` returns an empty list on a stock install.
+- There is deliberately **no `--agent` passthrough**. `agy agents` returns an empty list on a stock install, so the flag could never do anything useful.
 - Prompts are passed with `spawnSync` **without** `shell: true`, so quotes, `$` and backticks in a prompt reach `agy` intact and can't be reinterpreted by a shell.
 
 ### `types`
@@ -441,6 +449,7 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 
 ```
 .
+├── LICENSE                            # MIT
 ├── .claude-plugin/
 │   └── marketplace.json               # marketplace manifest
 ├── test/
@@ -464,10 +473,15 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 
 ## Versioning
 
-Marketplace and plugin are both at `0.2.0`. See `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
+Marketplace and plugin are both at `0.3.0`. See `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
 
-`0.2.0` adds follow-up conversations, filesystem-verified output and the offline test suite. It also covers the removal of the `research` task type, which was a breaking change that shipped under `0.1.1`.
+- **0.3.0** — MIT license, token usage and duration reported with every answer, dead `--agent` flag removed.
+- **0.2.0** — follow-up conversations, filesystem-verified output, offline test suite. Also covered the removal of the `research` task type, a breaking change that had shipped under `0.1.1`.
 
 ## License
 
-No license file yet — all rights reserved by default. Add a `LICENSE` if you intend to allow reuse.
+[MIT](LICENSE) — free to use, modify and redistribute, including commercially. The only condition is that the copyright notice travels with it.
+
+It is provided **as is, with no warranty and no liability**, which is worth reading literally: the `image` and `ui` task types run Antigravity with unattended tool approval on your machine. That is what makes them work headlessly, and it means you are trusting Antigravity with whatever `--out` points at.
+
+Not affiliated with or endorsed by Google. "Antigravity" and `agy` are Google's; this is an independent plugin that talks to their CLI, and installing it grants you no rights to Antigravity itself.

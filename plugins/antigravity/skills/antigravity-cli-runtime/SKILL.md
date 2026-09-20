@@ -54,16 +54,26 @@ Applies a per-type preset — agy flags plus prompt framing — on top of the `r
 
 The scan is **shallow and non-recursive**. For a `code` task `--out` can be an entire repository, and walking it on every run would cost far more than it catches, so writes into subdirectories are not reported.
 
+### The `metaLine` field
+
+Every run that reaches agy also returns `metaLine`, a ready-formatted string:
+
+```
+[agy conversation: bab277a7-33cb-459b-86f3-4d92b31b4557 · 13,053 tokens · 3.5s]
+```
+
+Append it verbatim as the final line of the answer. It is built in the script rather than composed by the caller, so the forwarding layer never has to format numbers and the shape stays consistent. It carries the id needed to resume the conversation, and the token count and wall time the run cost.
+
 ### Follow-up conversations
 
-Pass `--conversation <id>`, taken from an earlier result's `conversation_id`, to resume that conversation. Verified: a resumed turn keeps the earlier context, still honours `--add-dir` and `--dangerously-skip-permissions`, and can write files — a resumed `image` task asked only to "change the colour" reproduced the previous composition.
+Pass `--conversation <id>`, taken from an earlier result's `conversation_id` or its `metaLine`, to resume that conversation. Verified: a resumed turn keeps the earlier context, still honours `--add-dir` and `--dangerously-skip-permissions`, and can write files — a resumed `image` task asked only to "change the colour" reproduced the previous composition.
 
 Never use agy's `-c`/`--continue`. It means "the most recent conversation on this machine", which will silently attach to a conversation started in the Antigravity IDE or by a task running in parallel. The script only ever emits an explicit `--conversation <id>`.
 
 ### `run`
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" run --prompt "<task text>" [--model <slug>] [--effort low|medium|high] [--agent <name>] [--mode accept-edits|plan] [--add-dir <dir>] [--timeout <duration>] [--skip-permissions]
+node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" run --prompt "<task text>" [--conversation <id>] [--model <slug>] [--effort low|medium|high] [--mode accept-edits|plan] [--add-dir <dir>] [--timeout <duration>] [--skip-permissions] [--dry-run]
 ```
 
 The raw escape hatch — no presets, no framing. Runs `agy -p "<task text>" --output-format json` and re-emits agy's own JSON envelope:
@@ -118,4 +128,4 @@ The `ui` preset carries a related workaround for a different reason: the built-i
 
 - The script always writes a bare JSON object with `console.log` — no other stdout noise. If a caller sees anything else on stdout, something upstream is broken.
 - The script never needs a shell (`spawnSync` is called without `shell: true`), so prompts containing quotes, `$`, or backticks pass through safely.
-- `--agent` is accepted but currently useless: `agy agents` returns an empty list on a stock install.
+- There is deliberately no `--agent` passthrough. `agy agents` returns an empty list on a stock install, so the flag could never do anything useful.

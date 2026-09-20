@@ -124,6 +124,12 @@ check('-c / --continue is never used', () => {
   return null;
 });
 
+check('--agent is never forwarded', () => {
+  // agy agents is empty on a stock install, so the flag is intentionally unsupported.
+  const argv = argvOf('run', '--prompt', 'x', '--agent', 'whatever');
+  return argv.includes('--agent') ? `--agent leaked into: ${argv.join(' ')}` : null;
+});
+
 check('--add-dir is forwarded and repeatable', () => {
   const argv = argvOf('run', '--prompt', 'x', '--add-dir', '.', '--add-dir', '..');
   const count = argv.filter((a) => a === '--add-dir').length;
