@@ -234,7 +234,7 @@ Either command forwards to the `antigravity-rescue` subagent, which makes exactl
 
 ## Versioning
 
-Both the marketplace and the `antigravity` plugin are currently at `0.1.0`. See `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
+Both the marketplace and the `antigravity` plugin are currently at `0.1.1`. See `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
 
 ## License
 
