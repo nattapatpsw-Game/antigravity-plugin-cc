@@ -48,6 +48,19 @@ Applies a per-type preset — agy flags plus prompt framing — on top of the `r
 
 `ask` and `code` stay on `accept-edits` rather than blanket auto-approval: that is enough for `write_to_file` to create new files (verified), while shell commands remain denied. `image` genuinely needs the blanket flag — `generate_image` reaches for `RunCommand`, which `accept-edits` does not cover.
 
+### Prompt blocks
+
+Each type's framing is composed from a `BLOCKS` table rather than written out per type. Every block's wording came from an observed headless failure, so blocks are rearranged and reused but never reworded — the smoke test asserts the load-bearing phrases survive.
+
+Two blocks apply broadly:
+
+- **`followThrough`** — on every type. `agy` has an `ask_question` tool and print mode has nobody to answer it, so a clarifying question silently burns the whole run. This tells it to act on the most reasonable low-risk interpretation.
+- **`noShell`** — on `ask`. Follow-through alone made it reach for the shell: "test this alias" became a `RunCommand` attempt, denied, run over. With this it answers from knowledge and names the command it would have run.
+
+### Retries
+
+A run that returns empty is retried exactly once, and only when `denied_actions` is empty and `duration_seconds` is under 30. A denial repeats identically; a `--print-timeout` expiry burns the full budget and reports `duration_seconds: 0`. The result carries `retried: true` so it is never invisible.
+
 ### Output verification
 
 `filesCreated` and `filesModified` come from comparing a listing of `--out` taken before the run with one taken after, by filename and mtime. They describe what is on disk, not what agy said it did, so they outrank the response text — a run that claims a file and reports an empty `filesCreated` produced nothing.

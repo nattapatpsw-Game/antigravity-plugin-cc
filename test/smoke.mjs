@@ -130,6 +130,70 @@ check('--agent is never forwarded', () => {
   return argv.includes('--agent') ? `--agent leaked into: ${argv.join(' ')}` : null;
 });
 
+check('model aliases resolve to full slugs', () => {
+  const expected = {
+    flash: 'gemini-3.8-flash-high',
+    pro: 'gemini-3.1-pro-high',
+    sonnet: 'claude-sonnet-4-6',
+    opus: 'claude-opus-4-6-thinking',
+  };
+  for (const [alias, slug] of Object.entries(expected)) {
+    const argv = argvOf('task', '--type', 'ask', '--prompt', 'x', '--model', alias);
+    const got = argv[argv.indexOf('--model') + 1];
+    if (got !== slug) return `${alias} resolved to ${got}, expected ${slug}`;
+  }
+  return null;
+});
+
+check('a raw model slug is passed through untouched', () => {
+  const argv = argvOf('task', '--type', 'ask', '--prompt', 'x', '--model', 'gemini-3.6-flash-low');
+  const got = argv[argv.indexOf('--model') + 1];
+  return got === 'gemini-3.6-flash-low' ? null : `got ${got}`;
+});
+
+check('--fresh suppresses --conversation', () => {
+  const argv = argvOf('task', '--type', 'ask', '--prompt', 'x', '--conversation', 'abc-123', '--fresh');
+  return argv.includes('--conversation') ? `conversation survived --fresh: ${argv.join(' ')}` : null;
+});
+
+check('every task type carries the follow-through block', () => {
+  // agy cannot be asked a clarifying question in headless mode, so this block must never
+  // be dropped from a preset.
+  for (const type of TYPES) {
+    const prompt = argvOf('task', '--type', type, '--prompt', 'x')[1];
+    if (!prompt.includes('Do not ask a clarifying question')) return `${type} is missing it`;
+  }
+  return null;
+});
+
+check('every writing type still states its output contract', () => {
+  for (const type of TYPES) {
+    const prompt = argvOf('task', '--type', type, '--prompt', 'x')[1];
+    if (!/absolute path/.test(prompt)) return `${type} never asks for absolute paths`;
+  }
+  return null;
+});
+
+check('the ui preset still bans remote resources', () => {
+  const prompt = argvOf('task', '--type', 'ui', '--prompt', 'x')[1];
+  for (const phrase of ['no CDN script tags', 'no Google Fonts', 'no network access at all']) {
+    if (!prompt.includes(phrase)) return `missing phrase: ${phrase}`;
+  }
+  return null;
+});
+
+check('the code preset still forbids shell commands', () => {
+  const prompt = argvOf('task', '--type', 'code', '--prompt', 'x')[1];
+  return prompt.includes('do not run shell commands') ? null : 'the no-shell steer is gone';
+});
+
+check('ask is told the shell is unavailable', () => {
+  // Without this, follow-through turns "test X" into a RunCommand attempt that `ask`
+  // denies, and the run dies empty instead of answering.
+  const prompt = argvOf('task', '--type', 'ask', '--prompt', 'x')[1];
+  return prompt.includes('Shell commands are not available') ? null : 'the no-shell notice is gone';
+});
+
 check('--add-dir is forwarded and repeatable', () => {
   const argv = argvOf('run', '--prompt', 'x', '--add-dir', '.', '--add-dir', '..');
   const count = argv.filter((a) => a === '--add-dir').length;

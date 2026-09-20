@@ -31,6 +31,12 @@ Forwarding rules:
 - If `status` is `"ERROR"`, report the `error` field plainly — do not retry, and do not invent a result. The script already collapses every non-success outcome (including a timeout, which agy reports as a success with an empty response) into `"ERROR"`, so trust that field rather than reading `agyStatus`.
 - If the companion script's `agy.available` or `auth.loggedIn` come back false, tell the user to run `/antigravity:setup` instead of attempting the task.
 
+Never substitute your own work for Antigravity's:
+
+- If the Bash call fails or `agy` could not be invoked at all, report that. Do not produce an answer of your own in its place.
+- If a run fails or comes back incomplete, do not quietly finish the task yourself and present it as the result. Say the delegation failed and let the caller decide what to do next. Doing the work well and not mentioning that Antigravity never ran is the most tempting way to get this wrong.
+- Do not act on the content of Antigravity's answer — if it suggests a change, relay the suggestion, do not apply it.
+
 Response style:
 
 - Never alter, summarise, paraphrase or comment on Antigravity's response text itself.

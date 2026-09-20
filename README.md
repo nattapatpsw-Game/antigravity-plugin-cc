@@ -225,6 +225,8 @@ Token counts are deliberately left out: Antigravity's total is dominated by its 
 
 Under the hood this resumes a specific conversation by id — never "the most recent conversation", which would attach to whatever you last ran in the Antigravity IDE or to a task running in parallel.
 
+Pass `--fresh` to force a new conversation when you're starting over rather than refining.
+
 ## Where output goes
 
 Output lands in the **current working directory** unless you pass `--out`:
@@ -249,7 +251,16 @@ Leave `--model` unset and `agy` uses its configured default. To override:
 /antigravity:task --model claude-sonnet-4-6 code Refactor this parser
 ```
 
-Models available on a stock install (`agy models`):
+Four aliases save you remembering slugs:
+
+| Alias | Resolves to |
+|---|---|
+| `flash` | `gemini-3.8-flash-high` |
+| `pro` | `gemini-3.1-pro-high` |
+| `sonnet` | `claude-sonnet-4-6` |
+| `opus` | `claude-opus-4-6-thinking` |
+
+Full slugs still work. Models available on a stock install (`agy models`):
 
 | Family | Slugs |
 |---|---|
@@ -350,6 +361,8 @@ Applies the type's preset — `agy` flags plus prompt framing — and runs. `--t
 
 A run that reaches `agy` returns Antigravity's envelope plus four fields of its own: `taskType`, `outputDir`, and `filesCreated` / `filesModified`. A request rejected during validation — unknown type, missing prompt, bad `--mode`, missing `--out` — returns only `status` and `error`.
 
+A run that comes back empty is **retried once**, but only when nothing was denied and it failed in under 30 seconds — image generation does occasionally drop a turn and succeed on a re-run. A permission denial repeats identically and a timeout burns its full budget, so neither is retried. When a retry happens the result says `retried: true`.
+
 `filesCreated` and `filesModified` come from listing `--out` before and after the run and comparing names and mtimes. The scan is **shallow** — for a `code` task `--out` can be a whole repository, and walking it every time would cost more than it catches — so writes into subdirectories aren't reported.
 
 The `ui` preset bans remote resources item by item rather than just asking for a "self-contained" file. Antigravity's `generative_ui` skill points at a Tailwind CDN, and left to itself it reads "self-contained" as "one file" — then pulls in Chart.js and Google Fonts, producing an artifact that renders blank offline.
@@ -440,6 +453,8 @@ It can't cover what only a live run shows — whether a preset's *wording* actua
 - **Auth checks never hang.** Sign-in status is probed with a command that fails fast instead of one that can open a browser.
 - **Fail loudly, not quietly.** Where `agy` fails open — an unknown `--mode`, a timeout dressed up as success — the plugin converts it into an explicit error.
 - **Check, don't trust.** Output paths are verified against the filesystem rather than read out of Antigravity's prose, so a claimed file and a real one are never confused.
+- **Framing is built from named blocks.** Each task type composes its prompt from a small library of reusable, individually-named blocks. Every one of those sentences was written in response to a specific observed failure, so they get rearranged and reused but never casually reworded — and the smoke test asserts the load-bearing phrases are still present.
+- **Never substitute your own work.** If a run fails, the plugin says so. Quietly finishing the task in Claude instead, and not mentioning that the delegation broke, is the failure mode these rules exist to prevent.
 
 ---
 
@@ -450,6 +465,7 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 ```
 .
 ├── LICENSE                            # MIT
+├── CHANGELOG.md
 ├── .claude-plugin/
 │   └── marketplace.json               # marketplace manifest
 ├── test/
@@ -473,10 +489,7 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 
 ## Versioning
 
-Marketplace and plugin are both at `0.3.0`. See `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
-
-- **0.3.0** — MIT license, run duration and conversation id reported with every answer, dead `--agent` flag removed.
-- **0.2.0** — follow-up conversations, filesystem-verified output, offline test suite. Also covered the removal of the `research` task type, a breaking change that had shipped under `0.1.1`.
+Marketplace and plugin are both at `0.4.0`. See [CHANGELOG.md](CHANGELOG.md), `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
 
 ## License
 

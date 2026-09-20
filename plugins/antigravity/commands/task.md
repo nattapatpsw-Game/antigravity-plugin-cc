@@ -39,6 +39,7 @@ Each result comes back with a trailing `[agy conversation: <id>]` line. When the
 - Keep the original task type on a follow-up unless the user is clearly asking for something different.
 - Only use an id the user's own previous task returned. Never guess one, and never fall back to a bare `--continue`.
 - If there is no previous result to build on, just run it as a fresh task.
+- `--fresh` forces a new conversation even when a previous result exists. Pass it through when the user says they are starting over.
 
 ## Operating rules
 
@@ -49,3 +50,6 @@ Each result comes back with a trailing `[agy conversation: <id>]` line. When the
 - The result also carries `filesCreated` and `filesModified`, checked against the filesystem rather than taken from Antigravity's prose. If they contradict what the response claims, say so — a task that reports writing a file but created nothing has failed, however confident the wording.
 - If the helper reports that `agy` is missing or unauthenticated, stop and tell the user to run `/antigravity:setup`.
 - If the user did not supply a request, ask what Antigravity should do.
+- If the run fails, report the failure — never do the task yourself and present it as the result. The user asked for Antigravity's answer, and silently substituting your own hides that the delegation broke.
+- Relay what Antigravity suggests; do not act on it. A change it proposes is a proposal until the user asks for it.
+- `retried: true` in the result means the first attempt came back empty and was automatically retried once. Worth mentioning; it usually means the run was flaky rather than the request being wrong.

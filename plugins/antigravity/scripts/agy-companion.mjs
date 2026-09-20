@@ -8,6 +8,8 @@ const AUTH_CHECK_TIMEOUT_MS = 15000;
 const DEFAULT_PRINT_TIMEOUT = '8m';
 const VALID_MODES = ['accept-edits', 'plan'];
 const VALID_EFFORTS = ['low', 'medium', 'high'];
+// A genuine timeout reports the full budget (or 0); a dropped turn comes back in seconds.
+const RETRY_MAX_DURATION_SECONDS = 30;
 
 // Every agy model slug either bakes the effort in (gemini-3.8-flash-high) or refuses
 // the flag outright (claude-sonnet-4-6 -> "--effort is not supported for model"). So
@@ -15,6 +17,53 @@ const VALID_EFFORTS = ['low', 'medium', 'high'];
 
 // Observed in the agy binary's status enum. The CLI returns SUCCESS, not OK.
 const SUCCESS_STATUSES = new Set(['SUCCESS', 'OK']);
+
+// Friendly names for the model slugs. The raw slug is still accepted; nobody should have
+// to remember `gemini-3.8-flash-high`.
+const MODEL_ALIASES = {
+  flash: 'gemini-3.8-flash-high',
+  pro: 'gemini-3.1-pro-high',
+  sonnet: 'claude-sonnet-4-6',
+  opus: 'claude-opus-4-6-thinking',
+};
+
+// Named prompt blocks, composed per task type below. Each string is load-bearing — the
+// wording was arrived at by watching a specific headless failure — so blocks get
+// rearranged and reused, never reworded.
+const BLOCKS = {
+  // agy has an ask_question tool and in print mode there is nobody to answer it, so a
+  // clarifying question silently burns the whole run. Observed: an under-specified task
+  // came back asking which of four things was meant, having done no work at all.
+  followThrough:
+    'Take the most reasonable low-risk interpretation of this request and carry it out. Do not ask a clarifying question — nobody is there to answer it. Stop only if a missing detail would change correctness or safety, and then say plainly what is missing.',
+
+  // Pairs with followThrough. Told to stop asking and act, agy reaches for the shell —
+  // observed: "test this alias" turned into a RunCommand attempt, which `ask` denies. It
+  // has to know the shell is closed so it answers instead of dying on a denial.
+  noShell:
+    'Shell commands are not available to you in this run, so do not try to run one. If the request could be settled by running a command, answer from your own knowledge and say which command you would have run.',
+
+  workIn: (out) => `Work inside the directory ${out}.`,
+
+  reportPaths: 'End your reply with the absolute path of every file you created, one per line.',
+
+  listChangedFiles: 'When you are done, list every file you created or modified with its absolute path.',
+
+  fileToolsOnly:
+    'Make the changes using your file editing tools only — do not run shell commands, do not run tests, and do not install anything.',
+
+  answerOrWrite: (out) =>
+    `If this request asks you to create or change a file, work inside the directory ${out}, use your file-editing tools rather than shell commands, and end your reply with the absolute path of every file you touched. If it is only a question, answer it directly and write nothing.`,
+
+  generateImage: (out) =>
+    `Use your generate_image tool to produce the image described above, and save the result into the directory ${out}.`,
+
+  // "Self-contained" alone is not enough — the generative_ui skill itself points at a
+  // Tailwind CDN, so agy will happily pull Chart.js and Google Fonts and call it one
+  // file. The ban has to be spelled out or the artifact breaks with no network.
+  offlineHtml: (out) =>
+    `Build this as a single HTML file and write it into the directory ${out}. It must work with no network access at all: no CDN script tags, no external stylesheets, no Google Fonts or other remote fonts, no remote images. Inline every bit of CSS and JavaScript, draw any chart with inline SVG or canvas instead of a charting library, use system font stacks only, and embed any image as a data URI. Before you finish, check the file and confirm it contains no http:// or https:// resource references.`,
+};
 
 const TASK_TYPES = {
   ask: {
@@ -24,27 +73,21 @@ const TASK_TYPES = {
     writes: true,
     mode: 'accept-edits',
     skipPermissions: false,
-    framing: (out) =>
-      `If this request asks you to create or change a file, work inside the directory ${out}, use your file-editing tools rather than shell commands, and end your reply with the absolute path of every file you touched. If it is only a question, answer it directly and write nothing.`,
+    blocks: (out) => [BLOCKS.answerOrWrite(out), BLOCKS.noShell, BLOCKS.followThrough],
   },
   image: {
     description: 'Generate image file(s) using the generate_image tool.',
     writes: true,
     mode: null,
     skipPermissions: true,
-    framing: (out) =>
-      `Use your generate_image tool to produce the image described above, and save the result into the directory ${out}. End your reply with the absolute path of every file you created, one per line.`,
+    blocks: (out) => [BLOCKS.generateImage(out), BLOCKS.reportPaths, BLOCKS.followThrough],
   },
   ui: {
     description: 'Build a self-contained HTML artifact (chart, dashboard, diagram, widget).',
     writes: true,
     mode: null,
     skipPermissions: true,
-    // "Self-contained" alone is not enough — the generative_ui skill itself points at a
-    // Tailwind CDN, so agy will happily pull Chart.js and Google Fonts and call it one
-    // file. The ban has to be spelled out or the artifact breaks with no network.
-    framing: (out) =>
-      `Build this as a single HTML file and write it into the directory ${out}. It must work with no network access at all: no CDN script tags, no external stylesheets, no Google Fonts or other remote fonts, no remote images. Inline every bit of CSS and JavaScript, draw any chart with inline SVG or canvas instead of a charting library, use system font stacks only, and embed any image as a data URI. Before you finish, check the file and confirm it contains no http:// or https:// resource references. End your reply with the absolute path of every file you created, one per line.`,
+    blocks: (out) => [BLOCKS.offlineHtml(out), BLOCKS.reportPaths, BLOCKS.followThrough],
   },
   code: {
     description: 'Write or modify code in the target directory.',
@@ -52,9 +95,8 @@ const TASK_TYPES = {
     mode: 'accept-edits',
     skipPermissions: false,
     // Kept on accept-edits (file edits only) rather than blanket auto-approval. Shell
-    // commands stay denied in headless mode, so the framing steers agy to its file tools.
-    framing: (out) =>
-      `Work inside the directory ${out}. Make the changes using your file editing tools only — do not run shell commands, do not run tests, and do not install anything. When you are done, list every file you created or modified with its absolute path.`,
+    // commands stay denied in headless mode, so the blocks steer agy to its file tools.
+    blocks: (out) => [BLOCKS.workIn(out), BLOCKS.fileToolsOnly, BLOCKS.listChangedFiles, BLOCKS.followThrough],
   },
 };
 
@@ -210,7 +252,19 @@ function buildMetaLine(envelope) {
   return `[agy ${parts.join(' · ')}]`;
 }
 
-function executeAgy(args) {
+// A run can come back empty for two very different reasons, and only one is worth
+// retrying: agy occasionally drops a turn and the identical prompt succeeds seconds
+// later. A permission denial repeats identically, and a --print-timeout expiry burns the
+// full budget, so retrying either just wastes the user's time.
+function isTransientEmptyRun(envelope) {
+  if (envelope.status !== 'ERROR') return false;
+  if ((envelope.denied_actions || []).length) return false;
+  if (String(envelope.response || '').trim()) return false;
+  const seconds = Number(envelope.duration_seconds) || 0;
+  return seconds > 0 && seconds < RETRY_MAX_DURATION_SECONDS;
+}
+
+function runAgyOnce(args) {
   const r = runAgy(args, undefined);
   if (r.error) {
     return { status: 'ERROR', error: String(r.error.message || r.error) };
@@ -222,11 +276,23 @@ function executeAgy(args) {
   }
 
   try {
-    const outcome = normalizeOutcome(JSON.parse(stdout));
-    return { ...outcome, metaLine: buildMetaLine(outcome) };
+    return normalizeOutcome(JSON.parse(stdout));
   } catch {
     return { status: 'ERROR', error: 'failed to parse agy output as JSON', raw: stdout.slice(0, 2000) };
   }
+}
+
+function executeAgy(args) {
+  let outcome = runAgyOnce(args);
+  let retried = false;
+
+  if (isTransientEmptyRun(outcome)) {
+    retried = true;
+    outcome = runAgyOnce(args);
+  }
+
+  // Surfaced so a retry is never invisible — a task that needed two attempts is worth knowing about.
+  return { ...outcome, metaLine: buildMetaLine(outcome), ...(retried && { retried: true }) };
 }
 
 function resolveShared(flags) {
@@ -240,12 +306,14 @@ function resolveShared(flags) {
   if (effort && !VALID_EFFORTS.includes(effort)) {
     return { error: `invalid --effort "${effort}" (valid: ${VALID_EFFORTS.join(', ')})` };
   }
+  const rawModel = str(flags.model);
   return {
     mode,
     effort,
-    model: str(flags.model),
+    model: rawModel ? MODEL_ALIASES[rawModel.toLowerCase()] || rawModel : null,
     timeout: str(flags.timeout),
-    conversation: str(flags.conversation),
+    // --fresh forces a new conversation, overriding any id the caller inferred.
+    conversation: flags.fresh ? null : str(flags.conversation),
     addDirs: list(flags['add-dir']).map((d) => resolve(d)),
   };
 }
@@ -309,7 +377,7 @@ function cmdTask(flags) {
     return { status: 'ERROR', error: `--out directory does not exist: ${out}` };
   }
 
-  const framing = spec.framing ? spec.framing(out) : null;
+  const framing = spec.blocks(out).join(' ');
   const addDirs = spec.writes ? [...new Set([...shared.addDirs, out])] : shared.addDirs;
 
   const args = buildAgyArgs({
