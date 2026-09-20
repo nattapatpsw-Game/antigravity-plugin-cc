@@ -17,7 +17,7 @@ This repo is a **plugin marketplace** (`.claude-plugin/marketplace.json`) contai
         ├── agents/
         │   └── antigravity-rescue.md   # subagent: thin forwarder to the agy runtime
         ├── commands/
-        │   ├── task.md             # /antigravity:task — typed task (image/ui/research/code/ask)
+        │   ├── task.md             # /antigravity:task — typed task (image/ui/code/ask)
         │   ├── rescue.md           # /antigravity:rescue — raw passthrough to Antigravity
         │   └── setup.md            # /antigravity:setup — check/install/auth the agy CLI
         ├── scripts/
@@ -46,7 +46,7 @@ Three entry points are exposed:
 | Command | Purpose |
 |---|---|
 | `/antigravity:setup` | Checks whether `agy` is installed and authenticated; offers to install it and explains how to sign in. |
-| `/antigravity:task <type> <task>` | Runs a **typed** task — `image`, `ui`, `research`, `code` or `ask` — applying the right flags, permissions and output handling for that type. |
+| `/antigravity:task <type> <task>` | Runs a **typed** task — `image`, `ui`, `code` or `ask` — applying the right flags, permissions and output handling for that type. The type is inferred when you don't name one. |
 | `/antigravity:rescue <task>` | Raw passthrough: hands `<task>` to Antigravity with no framing and returns its answer verbatim. |
 
 ### What Antigravity can actually do
@@ -82,26 +82,25 @@ It checks auth with `agy models` rather than `agy -p`, because `agy -p` triggers
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task \
-  --type <image|ui|research|code|ask> \
+  --type <image|ui|code|ask> \
   --prompt "<task text>" \
   [--out <dir>] [--model <slug>] [--effort low|medium|high] [--timeout <duration>]
 ```
 
 | type | what it does | agy flags added | writes files |
 |---|---|---|---|
-| `ask` *(default)* | general question or discussion | — | no |
-| `research` | web search, answers with sources | — | no |
+| `ask` *(default)* | anything else — answers in prose, and creates files when asked | `--mode accept-edits`, `--add-dir <out>` | if asked |
 | `image` | generates image file(s) via `generate_image` | `--dangerously-skip-permissions`, `--add-dir <out>` | yes |
 | `ui` | builds one HTML artifact that works offline | `--dangerously-skip-permissions`, `--add-dir <out>` | yes |
 | `code` | edits code in place | `--mode accept-edits`, `--add-dir <out>` | yes |
 
-`--out` defaults to the current working directory and must already exist for the three writing types. For those types the framing requires Antigravity to end its reply with the absolute path of every file it produced — headless output is useless if you cannot find it.
+`--out` defaults to the current working directory and must already exist. Whenever files are produced the framing requires Antigravity to end its reply with their absolute paths — headless output is useless if you cannot find it.
 
 A run that reaches `agy` returns Antigravity's envelope plus two fields of its own: `taskType` (the type that ran) and `outputDir` (the resolved `--out`, or `null` for the types that write nothing). A request rejected before that — unknown type, missing prompt, bad `--mode`, `--out` that does not exist — returns just `status` and `error`.
 
 `ui` bans remote resources item by item rather than just asking for a "self-contained" file. Antigravity's built-in `generative_ui` skill points at a Tailwind CDN, and left to itself it reads "self-contained" as "one file" — then pulls in Chart.js and Google Fonts, producing an artifact that renders blank with no network.
 
-`code` deliberately runs on `--mode accept-edits` rather than blanket auto-approval: file edits are approved, shell commands are not, and the framing steers Antigravity to its file-editing tools instead. That makes it **edits-only** — it cannot run a build or a test loop, so a task like "run the tests and fix what fails" will be denied partway through.
+`ask` and `code` deliberately run on `--mode accept-edits` rather than blanket auto-approval. That is enough to create and edit files, while shell commands stay denied — so they are **edits-only**, and a task like "run the tests and fix what fails" will be denied partway through. `image` and `ui` do need the blanket flag, because those runs reach for `RunCommand` and `accept-edits` does not cover it.
 
 **`run`** — the raw escape hatch, with no presets or framing. Returns Antigravity's own response envelope:
 
@@ -215,14 +214,16 @@ This reports whether `agy` is installed and signed in, and:
 ```
 /antigravity:task image A flat illustration of a red fox reading a book
 /antigravity:task ui A bar chart comparing Q1-Q4 revenue: 120, 190, 70, 240
-/antigravity:task research What changed in HTTP/3 congestion control this year?
 /antigravity:task code Add retry-with-backoff to the fetch helper in api.js
 /antigravity:task How does this caching strategy compare to write-through?
+/antigravity:task Write a note.md summarising these three options
 ```
 
-The first word picks the type. Leave it out and the request is treated as `ask`.
+The first word picks the type when it is one of the four. Leave it out and the type is **inferred from what you asked for** — a picture becomes `image`, a chart becomes `ui`, editing code becomes `code`, anything else becomes `ask`. This matters if you work in a language other than English, where a leading English type word would be unnatural. When the type is inferred rather than typed, the answer says which one was chosen so you can correct it.
 
-For `image`, `ui` and `code` the output goes to the current directory unless you pass `--out <dir>`, and the reply ends with the absolute path of everything produced:
+`ask` is not read-only: if the request asks for a file, it writes one.
+
+Output goes to the current directory unless you pass `--out <dir>`, and the reply ends with the absolute path of everything produced:
 
 ```
 /antigravity:task image --out ./assets A flat illustration of a red fox
@@ -245,7 +246,7 @@ Either command forwards to the `antigravity-rescue` subagent, which makes exactl
 - **JSON-only stdout contract.** `agy-companion.mjs` never mixes log lines into stdout; every invocation produces exactly one JSON object. This is what lets the subagent/command layer parse results without fragile string-matching.
 - **Auth checks never hang.** Verifying sign-in status uses `agy models` (fails fast) instead of `agy -p` (which can silently open a browser and block for up to a minute).
 - **Task types are data, not logic.** The presets live in one table in `agy-companion.mjs`, so adding a type is a data edit rather than a change to the command or agent prompts. The Claude-side layer stays a dumb forwarder.
-- **Least privilege per type.** Only the types that genuinely need unattended tool approval get it. `code` runs on `--mode accept-edits` and is steered to file-editing tools instead, and `research` is steered to search results instead of URL fetching — both avoid blanket `--dangerously-skip-permissions`.
+- **Least privilege per type.** Only the types that genuinely need unattended tool approval get it. `ask` and `code` run on `--mode accept-edits`, which is enough to create and edit files while leaving shell commands denied; only `image` and `ui` get blanket `--dangerously-skip-permissions`, and only because those runs reach for `RunCommand`.
 
 ## Versioning
 

@@ -18,21 +18,14 @@ const SUCCESS_STATUSES = new Set(['SUCCESS', 'OK']);
 
 const TASK_TYPES = {
   ask: {
-    description: 'General question or discussion. Writes nothing.',
-    writes: false,
-    mode: null,
+    description: 'General question or task. Answers in prose, and creates files when the request asks for them.',
+    // accept-edits is enough for write_to_file on its own — verified. It deliberately
+    // stops short of --dangerously-skip-permissions, so shell commands stay denied.
+    writes: true,
+    mode: 'accept-edits',
     skipPermissions: false,
-    framing: null,
-  },
-  research: {
-    description: 'Search the web and report findings with sources. Writes nothing.',
-    writes: false,
-    mode: null,
-    skipPermissions: false,
-    // Fetching a page (ReadUrlContent) is denied in headless print mode, so the framing
-    // keeps research on search results, which come back with the search tool itself.
-    framing: () =>
-      'Research this using your web search tool, and answer from the search results themselves. Do not fetch or open individual URLs, do not run shell commands, and do not create or modify any files. Answer in prose and list the source URLs you relied on at the end.',
+    framing: (out) =>
+      `If this request asks you to create or change a file, work inside the directory ${out}, use your file-editing tools rather than shell commands, and end your reply with the absolute path of every file you touched. If it is only a question, answer it directly and write nothing.`,
   },
   image: {
     description: 'Generate image file(s) using the generate_image tool.',

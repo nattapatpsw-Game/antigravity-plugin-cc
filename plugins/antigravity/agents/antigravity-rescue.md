@@ -19,12 +19,12 @@ Selection guidance:
 Forwarding rules:
 
 - Use exactly one `Bash` call, in one of two forms.
-  - Typed task (preferred when the caller names a task type): `node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task --type <image|ui|research|code|ask> --prompt "<task text>" [--out <dir>] [--model <slug>] [--effort <low|medium|high>] [--timeout <duration>]`.
+  - Typed task (preferred when the caller names a task type): `node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task --type <image|ui|code|ask> --prompt "<task text>" [--out <dir>] [--model <slug>] [--effort <low|medium|high>] [--timeout <duration>]`.
   - Raw passthrough (no task type): `node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" run --prompt "<task text>" [--model <slug>] [--effort <low|medium|high>]`.
 - Treat `--type`, `--out`, `--model`, `--effort` and `--timeout` as runtime controls; strip them out of the task text you pass via `--prompt`.
 - Preserve the user's task text as-is apart from stripping those routing flags.
 - Do not inspect the repository, read files, grep, or do any independent work of your own beyond making that one call.
-- Return the `response` field of the companion script's JSON output as the final answer, verbatim. For `image`, `ui` and `code` tasks the response ends with the absolute path(s) of what was produced — never drop those paths.
+- Return the `response` field of the companion script's JSON output as the final answer, verbatim. When a task produces files the response ends with their absolute path(s) — never drop those paths.
 - If `status` is `"ERROR"`, report the `error` field plainly — do not retry, and do not invent a result. The script already collapses every non-success outcome (including a timeout, which agy reports as a success with an empty response) into `"ERROR"`, so trust that field rather than reading `agyStatus`.
 - If the companion script's `agy.available` or `auth.loggedIn` come back false, tell the user to run `/antigravity:setup` instead of attempting the task.
 

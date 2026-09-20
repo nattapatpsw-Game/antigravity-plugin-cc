@@ -32,20 +32,21 @@ Checks authentication via `agy models` (fails fast with a clear message when sig
 ### `task`
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task --type <image|ui|research|code|ask> --prompt "<task text>" [--out <dir>] [--model <slug>] [--effort low|medium|high] [--timeout <duration>]
+node "${CLAUDE_PLUGIN_ROOT}/scripts/agy-companion.mjs" task --type <image|ui|code|ask> --prompt "<task text>" [--out <dir>] [--model <slug>] [--effort low|medium|high] [--timeout <duration>]
 ```
 
-Applies a per-type preset — agy flags plus prompt framing — on top of the `run` path. `--type` defaults to `ask`. The result is agy's envelope plus `taskType` and `outputDir`.
+Applies a per-type preset — agy flags plus prompt framing — on top of the `run` path. `--type` defaults to `ask`. A run that reaches agy returns agy's envelope plus `taskType` and `outputDir`; a request rejected during validation returns only `status` and `error`.
 
 | type | agy flags | framing | writes |
 |---|---|---|---|
-| `ask` | — | — | no |
-| `research` | — | search-only; no URL fetching, no shell, no files | no |
+| `ask` | `--mode accept-edits`, `--add-dir <out>` | answer directly; if asked for a file, write it into `<out>` with file tools only and end with absolute paths | if asked |
 | `image` | `--dangerously-skip-permissions`, `--add-dir <out>` | use `generate_image`, save to `<out>`, end with absolute paths | yes |
 | `ui` | `--dangerously-skip-permissions`, `--add-dir <out>` | one HTML file in `<out>` with no network dependencies at all, end with absolute paths | yes |
 | `code` | `--mode accept-edits`, `--add-dir <out>` | file-editing tools only, no shell, list changed files | yes |
 
-`--out` defaults to the current working directory and must already exist for the three writing types.
+`--out` defaults to the current working directory and must already exist.
+
+`ask` and `code` stay on `accept-edits` rather than blanket auto-approval: that is enough for `write_to_file` to create new files (verified), while shell commands remain denied. `image` genuinely needs the blanket flag — `generate_image` reaches for `RunCommand`, which `accept-edits` does not cover.
 
 ### `run`
 
@@ -91,12 +92,12 @@ A run blocked by a headless permission denial looks identical, except that it al
 - `--timeout` maps to agy's own `--print-timeout` and defaults to `8m` — always pass one so a stuck run cannot hang past this plugin's control.
 - `--mode` is validated against `accept-edits|plan` **by this script**. agy only prints `warning: unrecognized --mode value` for a bad value and then runs in the default mode, so an unvalidated typo would silently run write-enabled.
 - `--effort` is dropped whenever `--model` is set. Every agy model slug either bakes the effort in (`gemini-3.8-flash-high`) or rejects the flag outright (`claude-sonnet-4-6` → `--effort is not supported for model`). Effort only selects a model when no model is named.
-- `--skip-permissions` maps to agy's `--dangerously-skip-permissions`; the `image` and `ui` presets set it because `generate_image` and `write_to_file` are not edit-gated. `code` deliberately does not — `--mode accept-edits` covers file edits, and its framing steers agy away from shell commands.
+- `--skip-permissions` maps to agy's `--dangerously-skip-permissions`; only the `image` and `ui` presets set it, because those runs reach for `RunCommand`, which `accept-edits` does not cover.
 - `--add-dir` is repeatable and is what allows agy to write outside its default workspace.
 
 ## Headless permission limits
 
-In print mode nobody can answer a permission prompt, so denied tool calls end the turn with an empty response and a `denied_actions` list. Observed denials: `RunCommand` and `ReadUrlContent`. This is why the `code` and `research` presets explicitly steer agy away from those tools in their framing rather than relying on it to guess.
+In print mode nobody can answer a permission prompt, so denied tool calls end the turn with an empty response and a `denied_actions` list. Observed denials: `RunCommand` and `ReadUrlContent`. This is why the `ask` and `code` presets explicitly steer agy to its file tools and away from the shell rather than relying on it to guess.
 
 The `ui` preset carries a related workaround for a different reason: the built-in `generative_ui` skill tells agy to load Tailwind from a gstatic CDN, which is fine inside the Antigravity app but produces a file that renders blank offline. Asking for a "self-contained" file is not enough — agy reads that as "one file" and still pulls Chart.js and Google Fonts. The preset therefore bans remote resources item by item and asks agy to re-check the file before finishing.
 

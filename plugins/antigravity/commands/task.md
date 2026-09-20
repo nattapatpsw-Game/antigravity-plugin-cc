@@ -1,6 +1,6 @@
 ---
-description: Run a typed Antigravity (agy) task — image, ui, research, code, or a general question
-argument-hint: '<image|ui|research|code|ask> [--out <dir>] [--model <slug>] [--effort low|medium|high] <what to do>'
+description: Run a typed Antigravity (agy) task — image, ui, code, or a general question
+argument-hint: '[image|ui|code|ask] [--out <dir>] [--model <slug>] [--effort low|medium|high] <what to do>'
 allowed-tools: Bash(node:*), Agent
 ---
 
@@ -17,17 +17,26 @@ Task types:
 
 - `image` — generate image file(s) with agy's `generate_image` tool.
 - `ui` — build a self-contained HTML artifact (chart, dashboard, diagram, widget).
-- `research` — search the web and answer with sources. Writes nothing.
 - `code` — write or modify code in the target directory.
-- `ask` — general question or discussion. Writes nothing.
+- `ask` — anything else. Answers in prose, and creates files when the request asks for them.
 
-Operating rules:
+## Choosing the type
 
-- The first bare word of the request is the task type when it matches one of the five above. Otherwise there is no type word and the whole request is an `ask`.
-- Strip the type word out of the text passed via `--prompt`; it is routing, not task content.
-- `--out`, `--model` and `--effort` are routing flags too. Preserve them for the forwarded call, but do not treat them as part of the natural-language task text.
+1. If the first bare word of the request is `image`, `ui`, `code` or `ask`, that is the type. Strip it out of the text passed via `--prompt` — it is routing, not task content.
+2. Otherwise **infer the type from what the user is asking for**, in any language:
+   - wants a picture drawn or generated → `image`
+   - wants a chart, graph, dashboard, diagram or interactive widget → `ui`
+   - wants code written, edited, refactored or fixed in a directory → `code`
+   - anything else → `ask`
+3. When you infer rather than read the type, say which type you chose in one short line before Antigravity's output, so the user can correct you.
+
+Do not treat a leading type word as routing when it is obviously part of the task text — for example "image processing library ไหนดี" is a question about libraries, not a request to generate an image named "processing library ไหนดี". When the rest of the request does not read as a task on its own, the leading word was content: keep it in the prompt and infer the type instead.
+
+## Operating rules
+
+- `--out`, `--model` and `--effort` are routing flags. Preserve them for the forwarded call, but do not treat them as part of the natural-language task text.
 - Leave `--model` and `--effort` unset unless the user explicitly asks for a specific one. Note that `--effort` is ignored whenever `--model` is given, because every agy model slug either bakes the effort in or rejects the flag.
-- `image`, `ui` and `code` write files. `--out` defaults to the current working directory — pass an explicit `--out` when the user names a destination, and make sure the directory already exists.
-- For those three types, the response ends with the absolute path(s) of what was produced. Keep those paths in the final answer; they are the only way the user can find the output.
+- Every type can write files. `--out` defaults to the current working directory — pass an explicit `--out` when the user names a destination, and make sure the directory already exists.
+- When files are produced, the response ends with their absolute paths. Keep those paths in the final answer; they are the only way the user can find the output.
 - If the helper reports that `agy` is missing or unauthenticated, stop and tell the user to run `/antigravity:setup`.
 - If the user did not supply a request, ask what Antigravity should do.
