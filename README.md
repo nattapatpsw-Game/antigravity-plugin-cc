@@ -140,6 +140,7 @@ For headless or CI environments, set `GEMINI_API_KEY` and add `{"modelProvider":
 | `/antigravity:task [type] <task>` | Runs a task with the right flags, permissions and output handling for its kind. The main entry point. |
 | `/antigravity:ag [type] <task>` | Short alias for `/antigravity:task`. Identical behaviour, less typing. |
 | `/antigravity:rescue <task>` | Raw passthrough — hands the task to Antigravity with no framing at all. Use when a preset gets in your way. |
+| `/antigravity:help` | Quick reference card — commands, task types, flags and aliases, without leaving the session. |
 
 ---
 
@@ -396,6 +397,7 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
         ├── commands/
         │   ├── task.md                # /antigravity:task
         │   ├── ag.md                  # /antigravity:ag — short alias
+        │   ├── help.md                # /antigravity:help — quick reference card
         │   ├── rescue.md              # /antigravity:rescue
         │   └── setup.md               # /antigravity:setup
         ├── scripts/
@@ -407,7 +409,7 @@ This repo is a **plugin marketplace** containing one plugin, `antigravity`.
 
 ## Versioning
 
-Marketplace and plugin are both at `0.5.0`. See [CHANGELOG.md](CHANGELOG.md), `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
+Marketplace and plugin are both at `0.6.0`. See [CHANGELOG.md](CHANGELOG.md), `.claude-plugin/marketplace.json` and `plugins/antigravity/.claude-plugin/plugin.json`.
 
 Each release is tagged, so you can pin to one instead of tracking the default branch:
 
@@ -415,7 +417,7 @@ Each release is tagged, so you can pin to one instead of tracking the default br
 {
   "source": "github",
   "repo": "nattapatpsw-Game/antigravity-plugin-cc",
-  "ref": "v0.5.0"
+  "ref": "v0.6.0"
 }
 ```
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0
+
+- `/antigravity:help` — a quick reference card for commands, task types, flags and model aliases, without leaving the session. Claude Code's own `/help` lists the commands but not the types and flags, which is where this plugin's surface actually lives. The task list is read from the plugin at runtime rather than written into the card, so it cannot drift.
+
 ## 0.5.0
 
 - `/antigravity:ag` — the short alias now ships with the plugin, so it works for anyone who installs it rather than only on the author's machine.
